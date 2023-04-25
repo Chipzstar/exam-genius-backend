@@ -9,7 +9,7 @@
     "nx:serve:backend": "nx serve",
     "nx:build:backend": "nx build",
     "nx:build:backend:prod": "npx prisma generate && nx build --prod --skip-nx-cache",
-    "nx:serve:backend:prod": "node dist/apps/exam-genius-backend/main.js"
+    "nx:serve:backend:prod": "node dist/exam-genius-backend/main.js"
   },
   "private": true,
   "dependencies": {
