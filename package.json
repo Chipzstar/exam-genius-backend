@@ -5,7 +5,11 @@
   "scripts": {
     "start": "nx serve",
     "build": "npx prisma generate && nx build",
-    "test": "nx test"
+    "test": "nx test",
+    "nx:serve:backend": "nx serve backend",
+    "nx:build:backend": "nx build backend",
+    "nx:build:backend:prod": "npx prisma generate && nx build backend --prod --skip-nx-cache",
+    "nx:serve:backend:prod": "node dist/apps/backend/main.js"
   },
   "private": true,
   "dependencies": {
