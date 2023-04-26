@@ -14,6 +14,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			num_marks: number;
 			paper_name: string;
 		};
+		console.table(req.body)
 		log.debug('Request:', req.body);
 		const completion = await openai.createChatCompletion({
 			model: 'gpt-3.5-turbo',
