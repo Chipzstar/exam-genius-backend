@@ -50,6 +50,6 @@ server.listen({ port, host }, err => {
     server.log.error(err);
     process.exit(1);
   } else {
-    console.log(`[ ready ] https://${host}:${port}`);
+    console.log(`[ ready ] ${process.env.NODE_ENV === "production" ? "https://" : "http://"}${host}:${port}`);
   }
 });

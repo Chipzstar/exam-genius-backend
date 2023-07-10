@@ -1,7 +1,13 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { log } from 'next-axiom';
+import { Client } from '@axiomhq/axiom-node';
 import { openai } from '../../utils/openai';
 import { prisma } from '../../utils/prisma';
+import { logger } from '../../utils/axiom';
+
+const client = new Client({
+	token: process.env.AXIOM_TOKEN,
+	orgId: process.env.AXIOM_ORG_ID,
+});
 
 export async function generatePaper(req: FastifyRequest, reply: FastifyReply): Promise<void> {
 	try {
@@ -15,7 +21,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			paper_name: string;
 		};
 		console.table(req.body)
-		log.debug('Request:', req.body);
+		logger.debug('Request:', req.body);
 		const completion = await openai.createChatCompletion({
 			model: 'gpt-4',
 			messages: [
@@ -41,8 +47,8 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 				}
 			]
 		});
-		log.info('openai response');
-		log.debug('openai completion', completion.data.choices[0]);
+		logger.info('openai response');
+		logger.debug('openai completion', completion.data.choices[0]);
 		console.log('-----------------------------------------------');
 		if (completion?.data?.choices[0]?.message?.content) {
 			const content: string = completion.data.choices[0].message.content;
@@ -60,13 +66,13 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 				.then(paper => {
 					console.log('=======================================');
 					console.log(paper);
-					log.debug('updated paper', paper);
+					logger.debug('updated paper', paper);
 					console.log('=======================================');
 				})
 				.catch(err => {
 					console.log('************************************************');
 					console.error(err);
-					log.error(err);
+					logger.error(err);
 					console.log('************************************************');
 				});
 			return reply.code(200).send({ result: completion.data.choices[0].message.content });
