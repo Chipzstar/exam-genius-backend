@@ -20,11 +20,11 @@
     "@fastify/cors": "^8.3.0",
     "@fastify/env": "^4.2.0",
     "@fastify/sensible": "~5.2.0",
-    "@prisma/client": "^4.16.2",
-    "axios": "^1.0.0",
+    "@prisma/client": "^5.11.0",
+    "axios": "^1.6.8",
     "fastify": "~4.19.2",
     "fastify-plugin": "~4.5.0",
-    "openai": "^3.2.1",
+    "openai": "^4.29.2",
     "tslib": "^2.3.0",
     "winston": "^3.9.0"
   },
@@ -48,8 +48,8 @@
     "nx": "16.5.0",
     "nx-cloud": "16.0.5",
     "prettier": "^2.6.2",
-    "prisma": "^4.16.2",
-    "ts-jest": "29.1.1",
+    "prisma": "^5.11.0",
+    "ts-jest": "^29.0.5",
     "ts-node": "10.9.1",
     "typescript": "5.1.6"
   }

@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { Client } from '@axiomhq/axiom-node';
-import { openai } from '../../utils/openai';
+import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/axiom';
 
@@ -22,7 +22,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		};
 		console.table(req.body)
 		logger.debug('Request:', req.body);
-		const completion = await openai.createChatCompletion({
+		const completion = await openai.chat.completions.create({
 			model: 'gpt-4',
 			messages: [
 				{
@@ -48,10 +48,10 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			]
 		});
 		logger.info('openai response');
-		logger.debug('openai completion', completion.data.choices[0]);
+		logger.debug('openai completion', completion.choices[0]);
 		console.log('-----------------------------------------------');
-		if (completion?.data?.choices[0]?.message?.content) {
-			const content: string = completion.data.choices[0].message.content;
+		if (completion?.choices[0]?.message?.content) {
+			const content: string = completion.choices[0].message.content;
 			const sanitizedContent = content.replace(/\\n\s+|\\n/g, '');
 			prisma.paper
 				.update({
@@ -75,7 +75,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 					logger.error(err);
 					console.log('************************************************');
 				});
-			return reply.code(200).send({ result: completion.data.choices[0].message.content });
+			return reply.code(200).send({ result: completion.choices[0].message.content });
 		}
 		throw new Error(
 			'There was an error generating this predicted past paper. We will generate a new one for you shortly.'
