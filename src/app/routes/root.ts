@@ -4,8 +4,4 @@ export default async function (fastify: FastifyInstance) {
 	fastify.get('/', async function (request: FastifyRequest, reply: FastifyReply) {
 		return { message: 'Hello API' };
 	});
-
-	fastify.get('/healthcheck', async function (request: FastifyRequest, reply: FastifyReply) {
-		return { message: 'Healthy' };
-	});
 }
