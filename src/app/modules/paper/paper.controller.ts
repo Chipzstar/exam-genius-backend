@@ -1,13 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { Client } from '@axiomhq/axiom-node';
 import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
-import { logger } from '../../utils/axiom';
-
-const client = new Client({
-	token: process.env.AXIOM_TOKEN,
-	orgId: process.env.AXIOM_ORG_ID,
-});
+import { logger } from '../../utils/logtail';
 
 export async function generatePaper(req: FastifyRequest, reply: FastifyReply): Promise<void> {
 	try {
