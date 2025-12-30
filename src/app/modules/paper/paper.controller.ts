@@ -17,7 +17,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		console.table(req.body)
 		logger.debug('Request:', req.body);
 		const completion = await openai.chat.completions.create({
-			model: 'gpt-4',
+			model: 'gpt-5.1',
 			messages: [
 				{
 					role: 'system',

@@ -4,7 +4,7 @@
 	"implicitDependencies": ["exam-genius-backend"],
 	"targets": {
 		"e2e": {
-			"executor": "@nrwl/jest:jest",
+			"executor": "@nx/jest:jest",
 			"outputs": ["{workspaceRoot}/coverage/{e2eProjectRoot}"],
 			"options": {
 				"jestConfig": "e2e/jest.config.ts",
@@ -12,7 +12,7 @@
 			}
 		},
 		"lint": {
-			"executor": "@nrwl/linter:eslint",
+			"executor": "@nx/eslint:lint",
 			"outputs": ["{options.outputFile}"],
 			"options": {
 				"lintFilePatterns": ["e2e/**/*.{js,ts}"]
