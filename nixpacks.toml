@@ -1,0 +1,22 @@
+# Nixpacks configuration for Railway deployment
+
+[phases.setup]
+# Use Node.js 23.x to ensure version >= 22.12.0 (required by Prisma 7)
+nixPkgs = ["nodejs_23", "pnpm-10_x", "openssl"]
+
+[phases.install]
+# Use pnpm for package installation
+cmds = [
+  "npm install -g corepack@0.24.1",
+  "corepack enable",
+  "pnpm install --frozen-lockfile"
+]
+
+[phases.build]
+# Run the build command
+cmds = ["pnpm run nx:build:backend:prod"]
+
+[start]
+# Start command for production
+cmd = "pnpm run nx:serve:backend:prod"
+

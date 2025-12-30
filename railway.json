@@ -2,11 +2,11 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run nx:build:backend:prod",
+    "buildCommand": "pnpm run nx:build:backend:prod",
     "buildEnvironment": "V2"
   },
   "deploy": {
-    "startCommand": "npm run nx:serve:backend:prod",
+    "startCommand": "pnpm run nx:serve:backend:prod",
     "healthcheckPath": "/healthcheck",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
