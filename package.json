@@ -2,6 +2,9 @@
 	"name": "exam-genius-backend",
 	"version": "0.0.0",
 	"license": "MIT",
+	"engines": {
+		"node": "22.x"
+	},
 	"scripts": {
 		"start": "nx serve --watch=false",
 		"build": "npx prisma generate && nx build",
