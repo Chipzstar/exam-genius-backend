@@ -7,7 +7,7 @@ nixPkgs = ["nodejs_23", "pnpm-10_x", "openssl"]
 [phases.install]
 # Use pnpm for package installation
 cmds = [
-  "pnpm install -g corepack@0.24.1",
+  "npm install -g corepack@0.24.1",
   "corepack enable",
   "pnpm install --frozen-lockfile"
 ]
