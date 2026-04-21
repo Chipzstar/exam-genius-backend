@@ -45,7 +45,8 @@
 			},
 			"configurations": {
 				"development": {
-					"buildTarget": "exam-genius-backend:build:development"
+					"buildTarget": "exam-genius-backend:build:development",
+					"port": 3001
 				},
 				"production": {
 					"buildTarget": "exam-genius-backend:build:production"

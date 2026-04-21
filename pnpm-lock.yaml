@@ -43,7 +43,10 @@ importers:
         version: 4.5.1
       openai:
         specifier: ^6.15.0
-        version: 6.15.0(ws@8.18.3)
+        version: 6.15.0(ws@8.18.3)(zod@4.3.6)
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.1
       tslib:
         specifier: ^2.3.0
         version: 2.8.1
@@ -53,6 +56,9 @@ importers:
       ws:
         specifier: ^8.18.3
         version: 8.18.3
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@nx/esbuild':
         specifier: 19.8.9
@@ -75,6 +81,9 @@ importers:
       '@nx/workspace':
         specifier: 19.8.9
         version: 19.8.9
+      '@prisma-utils/prismerge':
+        specifier: ^1.7.0
+        version: 1.7.0
       '@types/jest':
         specifier: 29.5.14
         version: 29.5.14
@@ -1278,6 +1287,10 @@ packages:
     peerDependencies:
       typescript: ^3 || ^4 || ^5
 
+  '@prisma-utils/prismerge@1.7.0':
+    resolution: {integrity: sha512-TQJVcJB1ZbX/jUg7yTYWu0SX0DgR5sbrJmBGySobMqvP/3pUzfLXQzLlHIK975x2LFXDXSE3atK/sff7iQQohg==}
+    hasBin: true
+
   '@prisma/adapter-neon@7.2.0':
     resolution: {integrity: sha512-XLTCQ0mDdaOqzBO99jyMOWBofJ5iqsvgWYB7lW+2ZEXvY6888tkeKfpo2VwdKhu1Cj/q4IqHd15eFQzPwbpjJQ==}
 
@@ -1860,6 +1873,10 @@ packages:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
 
+  commander@9.5.0:
+    resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
+    engines: {node: ^12.20.0 || >=14}
+
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
@@ -1901,6 +1918,14 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  debug@3.2.7:
+    resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
 
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
@@ -2357,6 +2382,11 @@ packages:
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
     deprecated: Glob versions prior to v9 are no longer supported
+
+  glob@8.0.3:
+    resolution: {integrity: sha512-ull455NHSHI/Y1FqGaaYFaLGkNMMJbavMrEGFXG/PGrg6y7sutWHUHrz6gy6WEBH6akM1M414dWKCNs+IhKdiQ==}
+    engines: {node: '>=12'}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   globals@13.24.0:
     resolution: {integrity: sha512-AhO5QUcj8llrbG09iWhPU2B204J1xnPeL8kQmVorSsy+Sjj1sk8gIyh6cUocGmH4L0UuhAJy+hJMRA4mgA4mFQ==}
@@ -2910,6 +2940,9 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
+  node-ensure@0.0.0:
+    resolution: {integrity: sha512-DRI60hzo2oKN1ma0ckc6nQWlHU69RH6xN0sjQTjMpChPfTYvKZdcQFfdYK2RWbJcKyUizSIy/l8OTGxMAM1QDw==}
+
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
 
@@ -3049,6 +3082,10 @@ packages:
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
 
+  pdf-parse@1.1.1:
+    resolution: {integrity: sha512-v6ZJ/efsBpGrGGknjtq9J/oC8tZWq0KWL5vQrk2GlzLEQPUDB1ex+13Rmidl1neNN358Jn9EHZw5y07FFtaC7A==}
+    engines: {node: '>=6.8.1'}
+
   perfect-debounce@1.0.0:
     resolution: {integrity: sha512-xCy9V055GLEqoFaHoC1SoLIaLmWctgCUaBaWxDZ7/Zx4CTyX7cJQLJOok/orfjZAh9kEYpjJa4d0KcJmCbctZA==}
 
@@ -3094,6 +3131,10 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
+
+  pluralize@8.0.0:
+    resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
+    engines: {node: '>=4'}
 
   postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
@@ -3754,6 +3795,9 @@ packages:
 
   zeptomatch@2.0.2:
     resolution: {integrity: sha512-H33jtSKf8Ijtb5BW6wua3G5DhnFjbFML36eFu+VdOoVY4HD9e7ggjqdM6639B+L87rjnR6Y+XeRzBXZdy52B/g==}
+
+  zod@4.3.6:
+    resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
 snapshots:
 
@@ -5429,6 +5473,13 @@ snapshots:
       esquery: 1.6.0
       typescript: 5.5.4
 
+  '@prisma-utils/prismerge@1.7.0':
+    dependencies:
+      commander: 9.5.0
+      glob: 8.0.3
+      lodash: 4.17.21
+      pluralize: 8.0.0
+
   '@prisma/adapter-neon@7.2.0':
     dependencies:
       '@neondatabase/serverless': 1.0.2
@@ -6126,6 +6177,8 @@ snapshots:
     dependencies:
       delayed-stream: 1.0.0
 
+  commander@9.5.0: {}
+
   concat-map@0.0.1: {}
 
   confbox@0.2.2: {}
@@ -6174,6 +6227,10 @@ snapshots:
       which: 2.0.2
 
   csstype@3.2.3: {}
+
+  debug@3.2.7:
+    dependencies:
+      ms: 2.1.3
 
   debug@4.4.3:
     dependencies:
@@ -6662,6 +6719,14 @@ snapshots:
       minimatch: 3.1.2
       once: 1.4.0
       path-is-absolute: 1.0.1
+
+  glob@8.0.3:
+    dependencies:
+      fs.realpath: 1.0.0
+      inflight: 1.0.6
+      inherits: 2.0.4
+      minimatch: 5.1.6
+      once: 1.4.0
 
   globals@13.24.0:
     dependencies:
@@ -7357,6 +7422,8 @@ snapshots:
 
   neo-async@2.6.2: {}
 
+  node-ensure@0.0.0: {}
+
   node-fetch-native@1.6.7: {}
 
   node-int64@0.4.0: {}
@@ -7475,9 +7542,10 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@6.15.0(ws@8.18.3):
+  openai@6.15.0(ws@8.18.3)(zod@4.3.6):
     optionalDependencies:
       ws: 8.18.3
+      zod: 4.3.6
 
   optionator@0.9.4:
     dependencies:
@@ -7540,6 +7608,13 @@ snapshots:
 
   pathe@2.0.3: {}
 
+  pdf-parse@1.1.1:
+    dependencies:
+      debug: 3.2.7
+      node-ensure: 0.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   perfect-debounce@1.0.0: {}
 
   pg-int8@1.0.1: {}
@@ -7592,6 +7667,8 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  pluralize@8.0.0: {}
 
   postgres-array@2.0.0: {}
 
@@ -8164,3 +8241,5 @@ snapshots:
   zeptomatch@2.0.2:
     dependencies:
       grammex: 3.1.12
+
+  zod@4.3.6: {}
