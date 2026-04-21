@@ -1,11 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { app } from './app/app';
-import paperRoutes from './app/modules/paper/paper.route';
+import { serverRoutes } from './app/modules/server-routes';
 import fastifyEnv from '@fastify/env';
 
 const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = Number(process.env.PORT);
 
 const schema = {
   type: 'object',
@@ -42,7 +42,7 @@ server.get("/healthcheck", async function () {
   return { status: "OK" };
 })
 
-server.register(paperRoutes, {prefix: '/server/paper'})
+server.register(serverRoutes, { prefix: '/server' })
 
 // Start listening.
 server.listen({ port, host }, err => {
