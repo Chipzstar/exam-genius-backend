@@ -137,7 +137,6 @@ Prisma schemas are **modular** using prismerge:
   - `course.prisma`: Course model and enums
   - `paper.prisma`: Paper model and enums
   - `user.prisma`: User model and enums
-  - `StripeEvent.prisma`: Stripe webhook events
 
 **After editing any schema file**: Run `npx prisma generate` to regenerate the client.
 
@@ -145,7 +144,6 @@ Prisma schemas are **modular** using prismerge:
 - **User**: Auth via Clerk, Stripe subscription management
 - **Course**: Links users to exam subjects (Subject, ExamBoard, year_level)
 - **Paper**: AI-generated practice papers (content stored as HTML)
-- **StripeEvent**: Stripe webhook event log
 
 ## Important Development Notes
 

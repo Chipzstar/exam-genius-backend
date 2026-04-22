@@ -133,7 +133,6 @@ prisma/
     ├── base.prisma
     ├── course.prisma
     ├── paper.prisma
-    ├── StripeEvent.prisma
     └── user.prisma
 ```
 
