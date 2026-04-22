@@ -14,7 +14,7 @@ This is an **Nx monorepo** (v19.8.9) containing a Node.js/Fastify backend applic
 - **Testing**: Jest
 - **Package Manager**: pnpm (v10.8.0)
 - **AI**: OpenAI GPT-4
-- **Logging**: Logtail/Winston
+- **Logging**: Winston
 - **Environment**: Doppler (production/staging)
 
 ## Essential Commands
@@ -114,7 +114,7 @@ src/app/
 │   └── root.ts
 └── utils/            # Shared utilities
     ├── gpt.ts        # OpenAI client configuration
-    ├── logtail.ts    # Logging setup
+    ├── logger.ts     # Logging setup
     └── prisma.ts     # Prisma client instance
 ```
 
@@ -161,9 +161,8 @@ Required variables (managed via Doppler):
 - Additional Stripe and Clerk variables (check .env.example if available)
 
 ### Logging
-- Use the Winston logger from `src/app/utils/logtail.ts`
-- Logs are sent to Logtail for production monitoring
-- Console logging is used alongside structured logging
+- Use the Winston logger from `src/app/utils/logger.ts`
+- Production logs use JSON on the console when `DOPPLER_ENVIRONMENT` is `prd`
 
 ### Error Handling
 - Controllers should catch errors and return appropriate HTTP status codes

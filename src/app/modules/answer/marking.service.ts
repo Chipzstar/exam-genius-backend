@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
-import { logger } from '../../utils/logtail';
+import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
 import {
 	AI_MARKING_PROMPT_VERSION,

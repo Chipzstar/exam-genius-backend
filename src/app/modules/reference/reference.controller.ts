@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { createHash } from 'crypto';
 import pdfParse from 'pdf-parse';
 import { prisma } from '../../utils/prisma';
-import { logger } from '../../utils/logtail';
+import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
 
 type ExtractBody = {

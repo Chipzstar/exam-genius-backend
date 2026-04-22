@@ -1,6 +1,6 @@
-import { logger } from './logtail';
+import { logger } from './logger';
 
-/** Structured fields for dashboards (Logtail + optional Axiom ingest). */
+/** Structured fields for dashboards (Winston + optional Axiom ingest). */
 export function logAiStructured(event: string, fields: Record<string, unknown>): void {
 	const row = {
 		event,

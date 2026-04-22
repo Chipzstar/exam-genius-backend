@@ -1,6 +1,6 @@
 import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
-import { logger } from '../../utils/logtail';
+import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
 import { buildMarkSchemeSystemPrompt, MARK_SCHEME_PROMPT_VERSION } from '../../prompts/mark-scheme';
 import { markSchemeResultSchema } from './schema';

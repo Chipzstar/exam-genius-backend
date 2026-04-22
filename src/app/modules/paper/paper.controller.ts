@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
-import { logger } from '../../utils/logtail';
+import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
 import { capitalize } from './capitalize';
 import { paperGenerationResultSchema, type PaperGenerationResult } from './schema';

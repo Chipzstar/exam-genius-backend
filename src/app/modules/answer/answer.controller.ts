@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { runAttemptMarking } from './marking.service';
-import { logger } from '../../utils/logtail';
+import { logger } from '../../utils/logger';
 
 type MarkBody = {
 	attempt_id: string;
