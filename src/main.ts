@@ -10,9 +10,12 @@ const port = Number(process.env.PORT);
 
 const schema = {
   type: 'object',
-  required: ['OPENAI_API_KEY'],
+  required: ['OPENAI_API_KEY', 'BACKEND_SHARED_SECRET'],
   properties: {
     OPENAI_API_KEY: {
+      type: 'string'
+    },
+    BACKEND_SHARED_SECRET: {
       type: 'string'
     }
   }

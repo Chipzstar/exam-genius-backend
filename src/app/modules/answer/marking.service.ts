@@ -51,17 +51,61 @@ export function scheduleStaleMarkingRecovery(onError: (err: unknown) => void): v
 	setInterval(() => void resetStaleMarkingAttempts().catch(onError), sweepMs);
 }
 
-const markingResultSchema = z.object({
-	questions: z.array(
-		z.object({
-			question_id: z.string(),
-			score: z.number().int(),
-			examiner_note: z.string()
-		})
-	),
-	grade_band: z.string().optional(),
-	summary: z.string().optional()
+const markingQuestionSchema = z.object({
+	question_id: z.string(),
+	score: z.number().int(),
+	examiner_note: z.string()
 });
+
+function parseMarkingResult(raw: string, expectedQuestionIds: string[]) {
+	const schema = z
+		.object({
+			questions: z.array(markingQuestionSchema),
+			grade_band: z.string().optional(),
+			summary: z.string().optional()
+		})
+		.superRefine((data, ctx) => {
+			const ids = data.questions.map(q => q.question_id);
+			if (ids.length !== expectedQuestionIds.length) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: `questions: expected ${expectedQuestionIds.length} entries (one per attempt answer), got ${ids.length}`
+				});
+				return;
+			}
+			const seen = new Set<string>();
+			for (const id of ids) {
+				if (seen.has(id)) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message: `questions: duplicate question_id: ${id}`
+					});
+					return;
+				}
+				seen.add(id);
+			}
+			const expected = new Set(expectedQuestionIds);
+			for (const id of expectedQuestionIds) {
+				if (!seen.has(id)) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message: `questions: missing question_id: ${id}`
+					});
+					return;
+				}
+			}
+			for (const id of seen) {
+				if (!expected.has(id)) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message: `questions: unexpected question_id: ${id}`
+					});
+					return;
+				}
+			}
+		});
+	return schema.parse(JSON.parse(raw));
+}
 
 export async function runAttemptMarking(attemptId: string): Promise<void> {
 	const claimed = await prisma.attempt.updateMany({
@@ -129,23 +173,32 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 
 		const raw = completion.choices[0]?.message?.content;
 		if (!raw) throw new Error('Empty marking response');
-		const parsed = markingResultSchema.parse(JSON.parse(raw));
+		const expectedQuestionIds = attempt.answers.map(a => a.question_id);
+		const parsed = parseMarkingResult(raw, expectedQuestionIds);
+
+		const byQuestionId = new Map(
+			parsed.questions.map(q => [q.question_id, q] as const)
+		);
+
+		const maxTotal = attempt.answers.reduce((sum, a) => sum + a.max_score, 0);
 
 		let total = 0;
-		let maxTotal = 0;
-		for (const q of parsed.questions) {
-			const ans = attempt.answers.find(a => a.question_id === q.question_id);
-			if (!ans) continue;
+		for (const ans of attempt.answers) {
+			const q = byQuestionId.get(ans.question_id);
+			if (!q) {
+				throw new Error(
+					`Marking output missing question_id after validation: ${ans.question_id}`
+				);
+			}
 			const clamped = Math.round(
 				Math.max(0, Math.min(q.score, ans.max_score))
 			);
 			total += clamped;
-			maxTotal += ans.max_score;
 			await prisma.attemptAnswer.update({
 				where: {
 					attempt_id_question_id: {
 						attempt_id: attemptId,
-						question_id: q.question_id
+						question_id: ans.question_id
 					}
 				},
 				data: {

@@ -6,5 +6,6 @@ export const logger = winston.createLogger({
 		winston.format.json()
 	),
 	transports: [new winston.transports.Console()],
-	silent: process.env.DOPPLER_ENVIRONMENT !== 'prd'
+	level: process.env.LOG_LEVEL || 'info',
+	silent: process.env.NODE_ENV === 'test'
 });
