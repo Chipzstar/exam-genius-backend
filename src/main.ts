@@ -5,7 +5,12 @@ import { serverRoutes } from './app/modules/server-routes';
 import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.service';
 import fastifyEnv from '@fastify/env';
 
-const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+/** Bind broadly in deploy targets; Node does not set NODE_ENV — Railway may not either. */
+const listenOnAllInterfaces =
+	process.env.NODE_ENV === 'production' ||
+	process.env.DOPPLER_ENVIRONMENT === 'prd' ||
+	Boolean(process.env.RAILWAY_ENVIRONMENT_ID);
+const host = listenOnAllInterfaces ? '0.0.0.0' : 'localhost';
 const port = Number(process.env.PORT);
 
 const schema = {
@@ -55,6 +60,6 @@ server.listen({ port, host }, err => {
     server.log.error(err);
     process.exit(1);
   } else {
-    console.log(`[ ready ] ${process.env.NODE_ENV === "production" ? "https://" : "http://"}${host}:${port}`);
+    console.log(`[ ready ] ${listenOnAllInterfaces ? "https://" : "http://"}${host}:${port}`);
   }
 });
