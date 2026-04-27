@@ -76,7 +76,7 @@ exam-genius-backend/
 │   │   │   └── paper/          # Paper module
 │   │   ├── plugins/            # Fastify plugins
 │   │   ├── routes/             # API routes
-│   │   └── utils/              # Utilities (GPT, Logtail, Prisma)
+│   │   └── utils/              # Utilities (GPT, logger, Prisma)
 │   ├── assets/                 # Static assets
 │   └── main.ts                 # Application entry point
 ├── prisma/
@@ -187,3 +187,4 @@ Environment variables are managed through:
     errors
 
 <!-- nx configuration end-->
+

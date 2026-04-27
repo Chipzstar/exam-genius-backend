@@ -116,11 +116,11 @@ Each module should contain:
 
 ### Best Practices
 
-1. **Imports**: Use absolute imports from `src/`
+1. **Imports**: Use relative imports from `src/`
 2. **Types**: Always use TypeScript types
 3. **Async/Await**: Use async/await for asynchronous operations
 4. **Error Handling**: Implement proper error handling with Fastify's error handling
-5. **Logging**: Use Logtail/Winston for logging
+5. **Logging**: Use Winston for logging (`src/app/utils/logger.ts`)
 
 ## Database Schema Management
 
@@ -133,7 +133,6 @@ prisma/
     ├── base.prisma
     ├── course.prisma
     ├── paper.prisma
-    ├── StripeEvent.prisma
     └── user.prisma
 ```
 

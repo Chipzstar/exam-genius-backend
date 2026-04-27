@@ -1,17 +1,21 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { app } from './app/app';
-import paperRoutes from './app/modules/paper/paper.route';
+import { serverRoutes } from './app/modules/server-routes';
+import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.service';
 import fastifyEnv from '@fastify/env';
 
 const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = Number(process.env.PORT);
 
 const schema = {
   type: 'object',
-  required: ['OPENAI_API_KEY'],
+  required: ['OPENAI_API_KEY', 'BACKEND_SHARED_SECRET'],
   properties: {
     OPENAI_API_KEY: {
+      type: 'string'
+    },
+    BACKEND_SHARED_SECRET: {
       type: 'string'
     }
   }
@@ -37,12 +41,13 @@ server.register(cors, {
 
 // Register your application as a normal plugin.
 server.register(app);
+scheduleStaleMarkingRecovery(err => server.log.error(err));
 
 server.get("/healthcheck", async function () {
   return { status: "OK" };
 })
 
-server.register(paperRoutes, {prefix: '/server/paper'})
+server.register(serverRoutes, { prefix: '/server' })
 
 // Start listening.
 server.listen({ port, host }, err => {
