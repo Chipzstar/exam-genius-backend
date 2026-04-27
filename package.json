@@ -34,6 +34,7 @@
 		"fastify-plugin": "5.0.1",
 		"openai": "^6.15.0",
 		"pdf-parse": "^1.1.1",
+		"tsconfig-paths": "4.2.0",
 		"tslib": "^2.3.0",
 		"winston": "^3.17.0",
 		"ws": "^8.18.3",
