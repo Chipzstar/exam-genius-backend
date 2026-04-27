@@ -1,8 +1,8 @@
 # Nixpacks configuration for Railway deployment
 
 [phases.setup]
-# Use Node.js 23.x to ensure version >= 22.12.0 (required by Prisma 7)
-nixPkgs = ["nodejs_23", "pnpm-10_x", "openssl"]
+# Use Node.js 22.x LTS to ensure version >= 22.12.0 (required by Prisma 7)
+nixPkgs = ["nodejs_22", "pnpm-10_x", "openssl"]
 
 [phases.install]
 # Use pnpm for package installation
