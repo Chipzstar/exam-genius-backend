@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AttemptStatus } from '@prisma/client';
 import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/logger';
@@ -10,11 +11,51 @@ import {
 
 export const MARKING_PROMPT_VERSION = AI_MARKING_PROMPT_VERSION;
 
+const DEFAULT_STALE_AFTER_MINUTES = 30;
+const DEFAULT_STALE_SWEEP_MS = 300_000;
+
+export class MarkingRequestError extends Error {
+	constructor(
+		message: string,
+		readonly statusCode: number
+	) {
+		super(message);
+		this.name = 'MarkingRequestError';
+	}
+}
+
+/** Resets attempts stuck in `marking` so marking can be retried after a crash or deploy. */
+export async function resetStaleMarkingAttempts(
+	staleAfterMinutes = Number(process.env.MARKING_STALE_AFTER_MINUTES ?? DEFAULT_STALE_AFTER_MINUTES)
+): Promise<number> {
+	const threshold = new Date(Date.now() - staleAfterMinutes * 60_000);
+	const result = await prisma.attempt.updateMany({
+		where: {
+			status: AttemptStatus.marking,
+			marking_started_at: { lt: threshold }
+		},
+		data: {
+			status: AttemptStatus.submitted,
+			marking_started_at: null
+		}
+	});
+	if (result.count > 0) {
+		logger.warn('resetStaleMarkingAttempts', { resetCount: result.count, staleAfterMinutes });
+	}
+	return result.count;
+}
+
+export function scheduleStaleMarkingRecovery(onError: (err: unknown) => void): void {
+	const sweepMs = Number(process.env.MARKING_STALE_SWEEP_MS ?? DEFAULT_STALE_SWEEP_MS);
+	void resetStaleMarkingAttempts().catch(onError);
+	setInterval(() => void resetStaleMarkingAttempts().catch(onError), sweepMs);
+}
+
 const markingResultSchema = z.object({
 	questions: z.array(
 		z.object({
 			question_id: z.string(),
-			score: z.number(),
+			score: z.number().int(),
 			examiner_note: z.string()
 		})
 	),
@@ -23,6 +64,23 @@ const markingResultSchema = z.object({
 });
 
 export async function runAttemptMarking(attemptId: string): Promise<void> {
+	const claimed = await prisma.attempt.updateMany({
+		where: { attempt_id: attemptId, status: AttemptStatus.submitted },
+		data: { status: AttemptStatus.marking, marking_started_at: new Date() }
+	});
+	if (claimed.count === 0) {
+		const row = await prisma.attempt.findUnique({
+			where: { attempt_id: attemptId },
+			select: { status: true }
+		});
+		if (!row) throw new MarkingRequestError('Attempt not found', 404);
+		if (row.status === AttemptStatus.marked) return;
+		if (row.status === AttemptStatus.marking) {
+			throw new MarkingRequestError('Marking already in progress', 409);
+		}
+		throw new MarkingRequestError(`Cannot mark attempt in status ${row.status}`, 409);
+	}
+
 	const t0 = Date.now();
 	const attempt = await prisma.attempt.findUnique({
 		where: { attempt_id: attemptId },
@@ -36,14 +94,9 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 			}
 		}
 	});
-	if (!attempt || attempt.status !== 'submitted') {
-		throw new Error('Invalid attempt state');
+	if (!attempt || attempt.status !== AttemptStatus.marking) {
+		throw new Error('Invalid attempt state after claim');
 	}
-
-	await prisma.attempt.update({
-		where: { attempt_id: attemptId },
-		data: { status: 'marking' }
-	});
 
 	const model = process.env.OPENAI_MARKING_MODEL ?? 'gpt-4o';
 
@@ -83,7 +136,9 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		for (const q of parsed.questions) {
 			const ans = attempt.answers.find(a => a.question_id === q.question_id);
 			if (!ans) continue;
-			const clamped = Math.max(0, Math.min(q.score, ans.max_score));
+			const clamped = Math.round(
+				Math.max(0, Math.min(q.score, ans.max_score))
+			);
 			total += clamped;
 			maxTotal += ans.max_score;
 			await prisma.attemptAnswer.update({
@@ -104,11 +159,12 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		await prisma.attempt.update({
 			where: { attempt_id: attemptId },
 			data: {
-				status: 'marked',
+				status: AttemptStatus.marked,
 				total_score: total,
 				total_max: maxTotal,
 				grade_band: parsed.grade_band ?? null,
-				marking_summary: parsed.summary ?? null
+				marking_summary: parsed.summary ?? null,
+				marking_started_at: null
 			}
 		});
 
@@ -133,7 +189,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		logger.error('runAttemptMarking', { attemptId, error: String(err) });
 		await prisma.attempt.update({
 			where: { attempt_id: attemptId },
-			data: { status: 'failed' }
+			data: { status: AttemptStatus.failed, marking_started_at: null }
 		});
 		throw err;
 	}

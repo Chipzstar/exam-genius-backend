@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { app } from './app/app';
 import { serverRoutes } from './app/modules/server-routes';
+import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.service';
 import fastifyEnv from '@fastify/env';
 
 const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
@@ -37,6 +38,7 @@ server.register(cors, {
 
 // Register your application as a normal plugin.
 server.register(app);
+scheduleStaleMarkingRecovery(err => server.log.error(err));
 
 server.get("/healthcheck", async function () {
   return { status: "OK" };
