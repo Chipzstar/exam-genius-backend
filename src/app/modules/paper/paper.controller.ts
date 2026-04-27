@@ -58,7 +58,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			paperCode: paper.paper_code
 		});
 
-		const model = process.env.OPENAI_PAPER_MODEL ?? 'gpt-4o';
+		const model = process.env.OPENAI_PAPER_MODEL ?? 'gpt-5-mini';
 		logAiStructured('paper_generate_start', {
 			paper_id: body.paper_id,
 			model,
@@ -154,7 +154,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			if (body?.paper_id) {
 				logAiStructured('paper_generate', {
 					paper_id: body.paper_id,
-					model: process.env.OPENAI_PAPER_MODEL ?? 'gpt-4o',
+					model: process.env.OPENAI_PAPER_MODEL ?? 'gpt-5-mini',
 					prompt_version: PAPER_GENERATE_PROMPT_VERSION,
 					duration_ms: Date.now() - t0,
 					ok: false,

@@ -6,7 +6,7 @@ import { buildMarkSchemeSystemPrompt, MARK_SCHEME_PROMPT_VERSION } from '../../p
 import { markSchemeResultSchema } from './schema';
 import { randomUUID } from 'crypto';
 
-const model = process.env.OPENAI_MARK_SCHEME_MODEL ?? process.env.OPENAI_PAPER_MODEL ?? 'gpt-4o';
+const model = process.env.OPENAI_MARK_SCHEME_MODEL ?? process.env.OPENAI_PAPER_MODEL ?? 'gpt-5-mini';
 
 export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 	const t0 = Date.now();

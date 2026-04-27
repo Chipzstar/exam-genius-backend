@@ -142,7 +142,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		throw new Error('Invalid attempt state after claim');
 	}
 
-	const model = process.env.OPENAI_MARKING_MODEL ?? 'gpt-4o';
+	const model = process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini';
 
 	try {
 		const payload = {
@@ -233,7 +233,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		logAiStructured('mark_attempt', {
 			attempt_id: attemptId,
 			paper_id: attempt.paper_id,
-			model: process.env.OPENAI_MARKING_MODEL ?? 'gpt-4o',
+			model: process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini',
 			prompt_version: MARKING_PROMPT_VERSION,
 			duration_ms: Date.now() - t0,
 			ok: false,
