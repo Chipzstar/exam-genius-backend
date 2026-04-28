@@ -1,10 +1,16 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
+import { zodResponseFormat } from 'openai/helpers/zod';
 import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
 import { capitalize } from './capitalize';
-import { paperGenerationResultSchema, type PaperGenerationResult } from './schema';
+import {
+	legacyPaperParseStructuredSchema,
+	legacyStructuredToPaperGenerationResult,
+	paperGenerationResultSchema,
+	type PaperGenerationResult
+} from './schema';
 import { renderPaperHtml } from './render';
 import { replacePaperQuestionsTx } from './persist-questions';
 import { buildStudentStyleContext } from './style-context';
@@ -185,9 +191,9 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 		if (!paper.content?.trim()) return reply.code(400).send({ error: 'No content' });
 
 		const model = process.env.OPENAI_PARSE_MODEL ?? 'gpt-4o-mini';
-		const completion = await openai.chat.completions.create({
+		const completion = await openai.chat.completions.parse({
 			model,
-			response_format: { type: 'json_object' },
+			response_format: zodResponseFormat(legacyPaperParseStructuredSchema, 'legacy_paper_parse'),
 			messages: [
 				{ role: 'system', content: buildParseLegacySystemPrompt() },
 				{
@@ -196,9 +202,10 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 				}
 			]
 		});
-		const raw = completion.choices[0]?.message?.content;
-		if (!raw) throw new Error('Empty parse response');
-		const parsed = paperGenerationResultSchema.parse(JSON.parse(raw));
+		const message = completion.choices[0]?.message;
+		const structured = message?.parsed;
+		if (!structured) throw new Error('Empty parse response');
+		const parsed: PaperGenerationResult = legacyStructuredToPaperGenerationResult(structured);
 
 		await prisma.$transaction(async tx => {
 			await replacePaperQuestionsTx(tx, paper.paper_id, parsed);

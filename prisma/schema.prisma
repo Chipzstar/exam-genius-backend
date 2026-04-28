@@ -242,6 +242,7 @@ model Paper {
   generator_version  Int              @default(1)
   structured_at      DateTime?
   mark_scheme_status MarkSchemeStatus @default(none)
+  legacy_one_time_regenerate_available Boolean @default(false)
   questions          Question[]
   markScheme         MarkScheme?
   paperRating        PaperRating?
