@@ -1,4 +1,5 @@
 import type { ContentBlock, PaperGenerationResult } from './schema';
+import { logger } from '../../utils/logger';
 
 function escapeHtml(s: string): string {
 	return s
@@ -68,6 +69,10 @@ function renderQuestionNodeHtml(node: QNode): string {
 }
 
 export function renderPaperHtml(result: PaperGenerationResult): string {
+	logger.debug('[paper.render] entry', {
+		question_nodes: result.questions.length,
+		has_paper_meta: Boolean(result.paper_meta)
+	});
 	const meta = result.paper_meta;
 	let header = '';
 	if (meta?.time_allowed_minutes != null || meta?.total_marks != null) {
@@ -82,5 +87,10 @@ export function renderPaperHtml(result: PaperGenerationResult): string {
 	header += '<hr />';
 	const roots = buildTree(result.questions);
 	const list = roots.map(renderQuestionNodeHtml).join('');
-	return `${header}<ol type="1">${list}</ol>`;
+	const html = `${header}<ol type="1">${list}</ol>`;
+	logger.debug('[paper.render] exit', {
+		root_sections: roots.length,
+		html_chars: html.length
+	});
+	return html;
 }

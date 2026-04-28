@@ -10,6 +10,8 @@ const model = process.env.OPENAI_MARK_SCHEME_MODEL ?? process.env.OPENAI_PAPER_M
 
 export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 	const t0 = Date.now();
+	logger.debug('[mark_scheme] entry', { paper_id: paperId });
+
 	const paper = await prisma.paper.findUnique({
 		where: { paper_id: paperId },
 		include: {
@@ -17,6 +19,11 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 		}
 	});
 	if (!paper || !paper.questions.length) {
+		logger.debug('[mark_scheme] abort_no_questions', {
+			paper_id: paperId,
+			paper_found: Boolean(paper),
+			question_count: paper?.questions.length ?? 0
+		});
 		await prisma.paper.update({
 			where: { paper_id: paperId },
 			data: { mark_scheme_status: 'failed' }
@@ -24,10 +31,16 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 		return;
 	}
 
+	logger.debug('[mark_scheme] paper_loaded', {
+		paper_id: paperId,
+		question_count: paper.questions.length
+	});
+
 	await prisma.paper.update({
 		where: { paper_id: paperId },
 		data: { mark_scheme_status: 'pending' }
 	});
+	logger.debug('[mark_scheme] paper_status_pending', { paper_id: paperId });
 
 	const msId = `ms_${randomUUID().replace(/-/g, '')}`;
 	await prisma.markScheme.upsert({
@@ -44,6 +57,7 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 			raw_content: null
 		}
 	});
+	logger.debug('[mark_scheme] row_upserted', { paper_id: paperId, mark_scheme_id: msId });
 
 	try {
 		const payload = paper.questions.map(q => ({
@@ -52,6 +66,13 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 			marks: q.marks,
 			body: q.body
 		}));
+
+		logger.debug('[mark_scheme] llm_invoke_start', {
+			paper_id: paperId,
+			model,
+			payload_question_count: payload.length,
+			user_json_chars: JSON.stringify({ questions: payload }).length
+		});
 
 		const completion = await openai.chat.completions.create({
 			model,
@@ -68,7 +89,17 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 		const raw = completion.choices[0]?.message?.content;
 		if (!raw) throw new Error('Empty mark scheme response');
 
+		logger.debug('[mark_scheme] llm_raw_received', {
+			paper_id: paperId,
+			raw_chars: raw.length,
+			finish_reason: completion.choices[0]?.finish_reason
+		});
+
 		const parsed = markSchemeResultSchema.parse(JSON.parse(raw));
+		logger.debug('[mark_scheme] schema_parse_ok', {
+			paper_id: paperId,
+			items_parsed: parsed.items?.length ?? 0
+		});
 		const modelAnswerJson = { items: parsed.items.map(i => ({ ...i })) } as object;
 		const pointsJson = { items: parsed.items.map(i => ({ question_id: i.question_id, points: i.points })) } as object;
 
@@ -87,6 +118,11 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 			data: { mark_scheme_status: 'success' }
 		});
 
+		logger.debug('[mark_scheme] persist_success', {
+			paper_id: paperId,
+			duration_ms: Date.now() - t0
+		});
+
 		logAiStructured('mark_scheme_generate', {
 			paper_id: paperId,
 			model,
@@ -95,6 +131,7 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 			ok: true
 		});
 	} catch (err) {
+		logger.debug('[mark_scheme] error_path', { paper_id: paperId, error: String(err) });
 		logAiStructured('mark_scheme_generate', {
 			paper_id: paperId,
 			model,

@@ -4,6 +4,7 @@ import { app } from './app/app';
 import { serverRoutes } from './app/modules/server-routes';
 import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.service';
 import fastifyEnv from '@fastify/env';
+import { logger, resolveDefaultLogLevel } from './app/utils/logger';
 
 /** Bind broadly in deploy targets; Node does not set NODE_ENV — Railway may not either. */
 const listenOnAllInterfaces =
@@ -61,5 +62,13 @@ server.listen({ port, host }, err => {
     process.exit(1);
   } else {
     console.log(`[ ready ] ${listenOnAllInterfaces ? "https://" : "http://"}${host}:${port}`);
+    logger.info('backend_winston_logging', {
+      effective_level: logger.level,
+      log_level_env: process.env.LOG_LEVEL ?? '(unset)',
+      resolved_default: resolveDefaultLogLevel(),
+      doppler_env: process.env.DOPPLER_ENVIRONMENT ?? '(unset)',
+      railway_env_name: process.env.RAILWAY_ENVIRONMENT_NAME ?? '(unset)',
+      node_env: process.env.NODE_ENV ?? '(unset)'
+    });
   }
 });

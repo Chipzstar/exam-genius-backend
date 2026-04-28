@@ -1,4 +1,5 @@
 import { prisma } from '../../utils/prisma';
+import { logger } from '../../utils/logger';
 
 function summarizeQuestions(questions: { label: string | null; marks: number; body: unknown }[]): string {
 	return questions
@@ -14,6 +15,11 @@ export async function buildStudentStyleContext(params: {
 	courseId: string;
 	paperCode: string;
 }): Promise<{ exemplars: string; avoid: string }> {
+	logger.debug('[style_context] entry', {
+		user_id: params.userId,
+		course_id: params.courseId,
+		paper_code: params.paperCode
+	});
 	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
 	const papers = await prisma.paper.findMany({
@@ -33,11 +39,14 @@ export async function buildStudentStyleContext(params: {
 		take: 10
 	});
 
-	const liked = papers
-		.filter(p => p.paperRating && p.paperRating.stars >= 4)
-		.slice(0, 2)
-		.map(p => summarizeQuestions(p.questions))
-		.join('\n---\n');
+	const highRated = papers.filter(p => p.paperRating && p.paperRating.stars >= 4);
+	const liked = highRated.slice(0, 2).map(p => summarizeQuestions(p.questions)).join('\n---\n');
+
+	logger.debug('[style_context] candidate_papers', {
+		total_fetched: papers.length,
+		high_rating_count_ge4: highRated.length,
+		exemplar_chars: liked.length
+	});
 
 	const feedback = await prisma.questionFeedback.findMany({
 		where: {
@@ -71,6 +80,13 @@ export async function buildStudentStyleContext(params: {
 	if (topTags) {
 		avoid = `Recent negative feedback themes: ${topTags}. Address these in wording, difficulty, and alignment to the specification.`;
 	}
+
+	logger.debug('[style_context] exit', {
+		exemplars_chars: liked.length,
+		avoid_chars: avoid.length,
+		feedback_rows: feedback.length,
+		tag_summary: topTags || '(none)'
+	});
 
 	return { exemplars: liked, avoid };
 }
