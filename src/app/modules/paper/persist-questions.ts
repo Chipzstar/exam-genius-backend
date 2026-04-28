@@ -37,25 +37,29 @@ export async function replacePaperQuestionsTx(
 	logger.debug('[questions.persist] deleted_existing', { paper_id: paperId });
 
 	const idMap = new Map<string, string>();
+	const rows = [];
 	for (const q of sorted) {
 		if (!incomingIds.has(q.client_id)) continue;
+		const questionId = `q_${randomUUID().replace(/-/g, '')}`;
 		const parentId =
 			q.parent_client_id && idMap.has(q.parent_client_id) ? idMap.get(q.parent_client_id)! : null;
 
-		const row = await tx.question.create({
-			data: {
-				question_id: `q_${randomUUID().replace(/-/g, '')}`,
-				paper_id: paperId,
-				parent_id: parentId,
-				order: q.order,
-				label: q.label,
-				marks: q.marks,
-				topic: q.topic ?? null,
-				body: q.body as Prisma.InputJsonValue,
-				revision: 1
-			}
+		rows.push({
+			question_id: questionId,
+			paper_id: paperId,
+			parent_id: parentId,
+			order: q.order,
+			label: q.label,
+			marks: q.marks,
+			topic: q.topic ?? null,
+			body: q.body as Prisma.InputJsonValue,
+			revision: 1
 		});
-		idMap.set(q.client_id, row.question_id);
+		idMap.set(q.client_id, questionId);
+	}
+
+	if (rows.length) {
+		await tx.question.createMany({ data: rows });
 	}
 	logger.debug('[questions.persist] exit', {
 		paper_id: paperId,

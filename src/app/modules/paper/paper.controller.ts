@@ -183,22 +183,25 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		});
 
 		logger.debug('[paper.generate] db_transaction_start', { paper_id: paper.paper_id });
-		await prisma.$transaction(async tx => {
-			await tx.paper.update({
-				where: { paper_id: paper.paper_id },
-				data: {
-					content: sanitizedContent,
-					status: 'success',
-					structured_at: new Date(),
-					prompt_version: PAPER_GENERATE_PROMPT_VERSION,
-					model,
-					generator_version: { increment: 1 }
-				}
-			});
-			logger.debug('[paper.generate] paper_row_updated', { paper_id: paper.paper_id });
-			await replacePaperQuestionsTx(tx, paper.paper_id, parsed!);
-			logger.debug('[paper.generate] questions_replaced_in_tx', { paper_id: paper.paper_id });
-		});
+		await prisma.$transaction(
+			async tx => {
+				await tx.paper.update({
+					where: { paper_id: paper.paper_id },
+					data: {
+						content: sanitizedContent,
+						status: 'success',
+						structured_at: new Date(),
+						prompt_version: PAPER_GENERATE_PROMPT_VERSION,
+						model,
+						generator_version: { increment: 1 }
+					}
+				});
+				logger.debug('[paper.generate] paper_row_updated', { paper_id: paper.paper_id });
+				await replacePaperQuestionsTx(tx, paper.paper_id, parsed!);
+				logger.debug('[paper.generate] questions_replaced_in_tx', { paper_id: paper.paper_id });
+			},
+			{ timeout: 15_000 }
+		);
 		logger.debug('[paper.generate] db_transaction_commit', { paper_id: paper.paper_id });
 
 		setImmediate(() => {
@@ -307,17 +310,20 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 		});
 
 		logger.debug('[paper.parse_legacy] db_transaction_start', { paper_id });
-		await prisma.$transaction(async tx => {
-			await replacePaperQuestionsTx(tx, paper.paper_id, parsed);
-			await tx.paper.update({
-				where: { paper_id: paper.paper_id },
-				data: {
-					structured_at: new Date(),
-					prompt_version: PARSE_LEGACY_PROMPT_VERSION,
-					model
-				}
-			});
-		});
+		await prisma.$transaction(
+			async tx => {
+				await replacePaperQuestionsTx(tx, paper.paper_id, parsed);
+				await tx.paper.update({
+					where: { paper_id: paper.paper_id },
+					data: {
+						structured_at: new Date(),
+						prompt_version: PARSE_LEGACY_PROMPT_VERSION,
+						model
+					}
+				});
+			},
+			{ timeout: 15_000 }
+		);
 		logger.debug('[paper.parse_legacy] db_transaction_commit', { paper_id });
 
 		logAiStructured('paper_parse_legacy', {

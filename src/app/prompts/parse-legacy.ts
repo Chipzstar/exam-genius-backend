@@ -7,7 +7,10 @@ export function buildParseLegacySystemPrompt(): string {
 		`Each question MUST use string IDs: "client_id" and "parent_client_id" are JSON strings (e.g. "q1", "q1a"), never bare numbers — so they can be used as stable keys. ` +
 		`Use parent_client_id null for top-level questions. ` +
 		`Include order (number), label (string or null), marks (number), topic (string or null), and body (array of blocks). ` +
-		`Blocks by kind: text and math require "value" (string); table requires headers and rows (string arrays); image_placeholder requires caption (string). ` +
+		`Every block must include kind, value, headers, rows, and caption keys. ` +
+		`For text and math blocks, set value to a string and set headers, rows, and caption to null. ` +
+		`For table blocks, set headers and rows to string arrays and set value and caption to null. ` +
+		`For image_placeholder blocks, set caption to a string and set value, headers, and rows to null. ` +
 		`Infer marks from phrases like [3 marks] when present, otherwise use 1. Preserve mathematical meaning. ` +
 		`If paper_meta is unknown, set it to null. For paper_meta fields you do not infer, use null (not omission).`
 	);

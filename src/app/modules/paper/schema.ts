@@ -38,11 +38,21 @@ export type ContentBlock = z.infer<typeof blockSchema>;
 /**
  * Strict schema for OpenAI structured outputs (`response_format` json_schema strict).
  * Optional fields must be `.nullable()`, not `.optional()`, per API rules.
+ * OpenAI also rejects `oneOf` inside array items, so blocks are represented
+ * as one flat object here and converted back into the discriminated union.
  */
 const paperMetaStructuredSchema = z.object({
 	time_allowed_minutes: z.number().nullable(),
 	total_marks: z.number().nullable(),
 	preamble_html: z.string().nullable()
+});
+
+const structuredBlockSchema = z.object({
+	kind: z.enum(['text', 'math', 'table', 'image_placeholder']),
+	value: z.string().nullable(),
+	headers: z.array(z.string()).nullable(),
+	rows: z.array(z.array(z.string())).nullable(),
+	caption: z.string().nullable()
 });
 
 const flatQuestionStructuredSchema = z.object({
@@ -52,7 +62,7 @@ const flatQuestionStructuredSchema = z.object({
 	label: z.string().nullable(),
 	marks: z.number(),
 	topic: z.string().nullable(),
-	body: z.array(blockSchema)
+	body: z.array(structuredBlockSchema)
 });
 
 export const legacyPaperParseStructuredSchema = z.object({
@@ -61,6 +71,21 @@ export const legacyPaperParseStructuredSchema = z.object({
 });
 
 export type LegacyPaperParseStructured = z.infer<typeof legacyPaperParseStructuredSchema>;
+
+function structuredBlockToContentBlock(block: z.infer<typeof structuredBlockSchema>): ContentBlock {
+	switch (block.kind) {
+		case 'text':
+		case 'math':
+			if (block.value == null) throw new Error(`${block.kind} block missing value`);
+			return { kind: block.kind, value: block.value };
+		case 'table':
+			if (!block.headers || !block.rows) throw new Error('table block missing headers or rows');
+			return { kind: 'table', headers: block.headers, rows: block.rows };
+		case 'image_placeholder':
+			if (block.caption == null) throw new Error('image_placeholder block missing caption');
+			return { kind: 'image_placeholder', caption: block.caption };
+	}
+}
 
 /** Maps strict structured output into {@link PaperGenerationResult} (optional paper_meta). */
 export function legacyStructuredToPaperGenerationResult(
@@ -75,10 +100,13 @@ export function legacyStructuredToPaperGenerationResult(
 		if (meta.preamble_html != null) inner.preamble_html = meta.preamble_html;
 		if (Object.keys(inner).length) paper_meta = inner;
 	}
-	return {
+	return paperGenerationResultSchema.parse({
 		...(paper_meta ? { paper_meta } : {}),
-		questions: s.questions
-	};
+		questions: s.questions.map(q => ({
+			...q,
+			body: q.body.map(structuredBlockToContentBlock)
+		}))
+	});
 }
 
 export const markSchemeResultSchema = z.object({
