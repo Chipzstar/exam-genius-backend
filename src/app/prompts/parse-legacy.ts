@@ -1,10 +1,17 @@
-export const PARSE_LEGACY_PROMPT_VERSION = 'parse_legacy_v1';
+export const PARSE_LEGACY_PROMPT_VERSION = 'parse_legacy_v2';
 
 export function buildParseLegacySystemPrompt(): string {
 	return (
-		`Convert exam paper HTML into structured JSON. Output ONLY valid JSON with keys "paper_meta" (optional) and "questions" (array). ` +
-		`Each question: client_id, parent_client_id (null for roots), order, label, marks, topic (nullable), body (block array). ` +
-		`Blocks: kind text|math|table|image_placeholder as in the paper generation schema. ` +
-		`Infer marks from text like [3 marks] if present, else 1. Preserve mathematical meaning.`
+		`Convert exam paper HTML into structured data. ` +
+		`Follow the JSON schema exactly: root has "paper_meta" (object or null) and "questions" (array). ` +
+		`Each question MUST use string IDs: "client_id" and "parent_client_id" are JSON strings (e.g. "q1", "q1a"), never bare numbers — so they can be used as stable keys. ` +
+		`Use parent_client_id null for top-level questions. ` +
+		`Include order (number), label (string or null), marks (number), topic (string or null), and body (array of blocks). ` +
+		`Every block must include kind, value, headers, rows, and caption keys. ` +
+		`For text and math blocks, set value to a string and set headers, rows, and caption to null. ` +
+		`For table blocks, set headers and rows to string arrays and set value and caption to null. ` +
+		`For image_placeholder blocks, set caption to a string and set value, headers, and rows to null. ` +
+		`Infer marks from phrases like [3 marks] when present, otherwise use 1. Preserve mathematical meaning. ` +
+		`If paper_meta is unknown, set it to null. For paper_meta fields you do not infer, use null (not omission).`
 	);
 }

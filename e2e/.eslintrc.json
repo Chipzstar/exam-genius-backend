@@ -4,12 +4,12 @@
   "overrides": [
     {
       "files": ["*.ts", "*.tsx"],
-      "extends": ["plugin:@nrwl/nx/typescript"],
+      "extends": ["plugin:@nx/eslint-plugin/typescript"],
       "rules": {}
     },
     {
       "files": ["*.js", "*.jsx"],
-      "extends": ["plugin:@nrwl/nx/javascript"],
+      "extends": ["plugin:@nx/eslint-plugin/javascript"],
       "rules": {}
     },
     {
@@ -17,5 +17,5 @@
       "rules": {}
     }
   ],
-  "plugins": ["@nrwl/nx"]
+  "plugins": ["@nx/eslint-plugin"]
 }
