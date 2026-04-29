@@ -150,15 +150,19 @@ Prisma schemas are **modular** using prismerge:
 ### Prisma Client Generation
 The Prisma client **must** be regenerated after any schema changes. Build scripts automatically handle this, but for manual changes:
 ```bash
+pnpm prisma:sync   # prismerge + prisma generate
+# or
 npx prisma generate
 ```
 
 ### Environment Variables
-Required variables (managed via Doppler):
-- `DATABASE_URL`: PostgreSQL connection string
-- `DATABASE_URL_UNPOOLED`: Direct PostgreSQL connection (for migrations)
+Required variables (managed via Doppler; **same names as the dashboard app** when deployed):
+
+- `DATABASE_URL`: Prisma **Accelerate** URL (`prisma+postgres://…`) — runtime connection (`accelerateUrl` in `src/app/utils/prisma.ts`).
+- `DIRECT_DATABASE_URL`: **Direct** PostgreSQL URL — used by Prisma CLI only (`prisma/prisma.config.ts` for `migrate`, `db push`, introspection).
 - `OPENAI_API_KEY`: OpenAI API authentication
-- Additional Stripe and Clerk variables (check .env.example if available)
+- Optional / legacy: `DATABASE_URL_UNPOOLED` if your host documents a separate unpooled string
+- Additional Stripe and Clerk variables (check Doppler project)
 
 ### Logging
 - Use the Winston logger from `src/app/utils/logger.ts`
@@ -198,8 +202,8 @@ node dist/exam-genius-backend/main.js
 - Check TypeScript version compatibility (5.5.4)
 
 ### Database connection issues
-- Verify `DATABASE_URL` in .env
-- Check if database migrations are up to date: `npx prisma migrate dev`
+- Verify `DATABASE_URL` (Accelerate) and `DIRECT_DATABASE_URL` (CLI) in `.env` / Doppler
+- Check if database migrations are up to date: `npx prisma migrate dev` (uses `DIRECT_DATABASE_URL` from `prisma/prisma.config.ts`)
 
 ### Test failures
 - Ensure environment variables are properly set

@@ -156,6 +156,11 @@ Environment variables are managed through:
 -   Doppler for production/staging
 -   `.env` file for local development
 
+**Database (shared with the dashboard app in deployment):**
+
+-   `DATABASE_URL` — Prisma Accelerate connection string (`prisma+postgres://…`) used at runtime by `src/app/utils/prisma.ts` (`accelerateUrl`).
+-   `DIRECT_DATABASE_URL` — direct Postgres URL for Prisma CLI (`migrate`, `db push`, etc.). Configured in `prisma/prisma.config.ts`. Set this wherever you run migrations (CI, local) alongside `DATABASE_URL`.
+
 ## Scripts Reference
 
 ```json
