@@ -161,7 +161,6 @@ Required variables (managed via Doppler; **same names as the dashboard app** whe
 - `DATABASE_URL`: Prisma **Accelerate** URL (`prisma+postgres://…`) — runtime connection (`accelerateUrl` in `src/app/utils/prisma.ts`).
 - `DIRECT_DATABASE_URL`: **Direct** PostgreSQL URL — used by Prisma CLI only (`prisma/prisma.config.ts` for `migrate`, `db push`, introspection).
 - `OPENAI_API_KEY`: OpenAI API authentication
-- Optional / legacy: `DATABASE_URL_UNPOOLED` if your host documents a separate unpooled string
 - Additional Stripe and Clerk variables (check Doppler project)
 
 ### Logging
