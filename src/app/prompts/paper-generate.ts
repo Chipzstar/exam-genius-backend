@@ -1,4 +1,13 @@
-export const PAPER_GENERATE_PROMPT_VERSION = 'paper_generate_v1';
+import type { ExamLevel } from '@prisma/client';
+
+export const PAPER_GENERATE_PROMPT_VERSION = 'paper_generate_v2';
+
+function qualificationLabels(level: ExamLevel): { student: string; expert: string } {
+	if (level === 'as_level') {
+		return { student: 'AS-level', expert: 'UK AS-level' };
+	}
+	return { student: 'A-level', expert: 'UK A-level' };
+}
 
 export function buildPaperGenerateUserPrompt(params: {
 	subject: string;
@@ -10,7 +19,10 @@ export function buildPaperGenerateUserPrompt(params: {
 	referenceExcerpts: string;
 	styleExemplars: string;
 	styleAvoid: string;
+	exam_level?: ExamLevel;
 }): string {
+	const level = params.exam_level ?? 'a_level';
+	const { student } = qualificationLabels(level);
 	const ref =
 		params.referenceExcerpts.trim().length > 0
 			? `\n\nReference material (style and format only; do not copy verbatim):\n${params.referenceExcerpts.slice(0, 120_000)}`
@@ -25,9 +37,9 @@ export function buildPaperGenerateUserPrompt(params: {
 			: '';
 
 	return (
-		`Generate a new practice exam paper for A-level ${params.exam_board} ${params.subject}, unit/module: ${params.course}, paper: ${params.paper_name}. ` +
+		`Generate a new practice exam paper for ${student} ${params.exam_board} ${params.subject}, unit/module: ${params.course}, paper: ${params.paper_name}. ` +
 		`Target approximately ${params.num_questions} main question groups and total marks around ${params.num_marks}. ` +
-		`Questions should be original but aligned with typical ${params.exam_board} ${params.subject} assessment style for this unit. ` +
+		`Questions should be original but aligned with typical ${params.exam_board} ${params.subject} assessment style for this qualification level and unit. ` +
 		`Return ONLY valid JSON matching the schema described in the system message (no markdown fences).` +
 		ref +
 		ex +
@@ -35,9 +47,10 @@ export function buildPaperGenerateUserPrompt(params: {
 	);
 }
 
-export function buildPaperGenerateSystemPrompt(subject: string): string {
+export function buildPaperGenerateSystemPrompt(subject: string, exam_level: ExamLevel = 'a_level'): string {
+	const { expert } = qualificationLabels(exam_level);
 	return (
-		`You are an expert assessment author for UK A-level ${subject}. ` +
+		`You are an expert assessment author for ${expert} ${subject}. ` +
 		`You output a single JSON object with keys "paper_meta" (optional object with time_allowed_minutes, total_marks, preamble_html string) ` +
 		`and "questions" (array). Each question has: client_id (string), parent_client_id (string or null for top-level), order (number), ` +
 		`label (string or null), marks (number), topic (string or null), body (array of blocks). ` +

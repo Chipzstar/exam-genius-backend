@@ -160,6 +160,7 @@ Environment variables are managed through:
 
 -   `DATABASE_URL` — Prisma Accelerate connection string (`prisma+postgres://…`) used at runtime by `src/app/utils/prisma.ts` (`accelerateUrl`).
 -   `DIRECT_DATABASE_URL` — direct Postgres URL for Prisma CLI (`migrate`, `db push`, etc.). Configured in `prisma/prisma.config.ts`. Set this wherever you run migrations (CI, local) alongside `DATABASE_URL`.
+-   `DISABLE_AS_LEVEL_EXAM_FLOW` — optional. When set to `true`, rejects AS-level paper generation and marking even if the dashboard allows AS-level (pairs with dashboard `DISABLE_AS_LEVEL_EXAM_FLOW` / PostHog rollout).
 
 ## Scripts Reference
 

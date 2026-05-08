@@ -133,13 +133,23 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 			paper: {
 				include: {
 					questions: true,
-					markScheme: true
+					markScheme: true,
+					course: { select: { exam_level: true } }
 				}
 			}
 		}
 	});
 	if (!attempt || attempt.status !== AttemptStatus.marking) {
 		throw new Error('Invalid attempt state after claim');
+	}
+
+	const markingExamLevel = attempt.paper.course?.exam_level ?? 'a_level';
+	if (markingExamLevel === 'as_level' && process.env.DISABLE_AS_LEVEL_EXAM_FLOW === 'true') {
+		await prisma.attempt.update({
+			where: { attempt_id: attemptId },
+			data: { status: AttemptStatus.submitted, marking_started_at: null }
+		});
+		throw new MarkingRequestError('AS-level marking is temporarily unavailable', 403);
 	}
 
 	const model = process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini';
@@ -165,7 +175,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 			messages: [
 				{
 					role: 'system',
-					content: buildAiMarkingSystemPrompt()
+					content: buildAiMarkingSystemPrompt(markingExamLevel)
 				},
 				{ role: 'user', content: JSON.stringify(payload).slice(0, 120_000) }
 			]
