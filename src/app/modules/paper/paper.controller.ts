@@ -21,6 +21,7 @@ import {
 } from '../../prompts/paper-generate';
 import { buildParseLegacySystemPrompt, PARSE_LEGACY_PROMPT_VERSION } from '../../prompts/parse-legacy';
 import { runMarkSchemeGeneration } from './mark-scheme.service';
+import type { ExamLevel } from '@prisma/client';
 
 type GenerateBody = {
 	paper_id: string;
@@ -47,9 +48,12 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		});
 
 		const paper = await prisma.paper.findUnique({
-			where: { paper_id: body.paper_id }
+			where: { paper_id: body.paper_id },
+			include: {
+				course: { select: { exam_level: true } }
+			}
 		});
-		if (!paper) {
+		if (!paper?.course) {
 			logger.debug('[paper.generate] paper_not_found', { paper_id: body.paper_id });
 			return reply.code(404).send({ error: 'Paper not found' });
 		}
@@ -59,8 +63,15 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			course_id: paper.course_id,
 			paper_code: paper.paper_code,
 			status: paper.status,
-			generator_version: paper.generator_version
+			generator_version: paper.generator_version,
+			exam_level: paper.course.exam_level
 		});
+
+		const examLevel = paper.course.exam_level as ExamLevel;
+		if (examLevel === 'as_level' && process.env.DISABLE_AS_LEVEL_EXAM_FLOW === 'true') {
+			logger.warn('[paper.generate] as_level_blocked', { paper_id: body.paper_id });
+			return reply.code(403).send({ error: 'AS-level generation is temporarily unavailable.' });
+		}
 
 		let referenceExcerpts = '';
 		if (body.reference_ids?.length) {
@@ -102,7 +113,8 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		logAiStructured('paper_generate_start', {
 			paper_id: body.paper_id,
 			model,
-			prompt_version: PAPER_GENERATE_PROMPT_VERSION
+			prompt_version: PAPER_GENERATE_PROMPT_VERSION,
+			exam_level: examLevel
 		});
 		const subjectCap = capitalize(String(body.subject));
 		const userContent = buildPaperGenerateUserPrompt({
@@ -114,9 +126,10 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			num_marks: Number(body.num_marks),
 			referenceExcerpts,
 			styleExemplars: style.exemplars,
-			styleAvoid: style.avoid
+			styleAvoid: style.avoid,
+			exam_level: examLevel
 		});
-		const systemContent = buildPaperGenerateSystemPrompt(subjectCap);
+		const systemContent = buildPaperGenerateSystemPrompt(subjectCap, examLevel);
 
 		logger.debug('[paper.generate] llm_invoke_start', {
 			paper_id: body.paper_id,
