@@ -5,11 +5,11 @@ import { logAiStructured } from '../../utils/ai-structured-log';
 import { buildMarkSchemeSystemPrompt, MARK_SCHEME_PROMPT_VERSION } from '../../prompts/mark-scheme';
 import { markSchemeResultSchema } from './schema';
 import { randomUUID } from 'crypto';
-
-const model = process.env.OPENAI_MARK_SCHEME_MODEL ?? process.env.OPENAI_PAPER_MODEL ?? 'gpt-5-mini';
+import { getModel } from '../../utils/llm-model-config';
 
 export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 	const t0 = Date.now();
+	let modelUsed = 'gpt-5-mini';
 	logger.debug('[mark_scheme] entry', { paper_id: paperId });
 
 	const paper = await prisma.paper.findUnique({
@@ -60,6 +60,8 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 	logger.debug('[mark_scheme] row_upserted', { paper_id: paperId, mark_scheme_id: msId });
 
 	try {
+		const { model_id } = await getModel('mark_scheme');
+		modelUsed = model_id;
 		const payload = paper.questions.map(q => ({
 			question_id: q.question_id,
 			label: q.label,
@@ -69,13 +71,13 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 
 		logger.debug('[mark_scheme] llm_invoke_start', {
 			paper_id: paperId,
-			model,
+			model: modelUsed,
 			payload_question_count: payload.length,
 			user_json_chars: JSON.stringify({ questions: payload }).length
 		});
 
 		const completion = await openai.chat.completions.create({
-			model,
+			model: modelUsed,
 			response_format: { type: 'json_object' },
 			messages: [
 				{ role: 'system', content: buildMarkSchemeSystemPrompt() },
@@ -125,7 +127,7 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 
 		logAiStructured('mark_scheme_generate', {
 			paper_id: paperId,
-			model,
+			model: modelUsed,
 			prompt_version: MARK_SCHEME_PROMPT_VERSION,
 			duration_ms: Date.now() - t0,
 			ok: true
@@ -134,7 +136,7 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 		logger.debug('[mark_scheme] error_path', { paper_id: paperId, error: String(err) });
 		logAiStructured('mark_scheme_generate', {
 			paper_id: paperId,
-			model,
+			model: modelUsed,
 			prompt_version: MARK_SCHEME_PROMPT_VERSION,
 			duration_ms: Date.now() - t0,
 			ok: false,

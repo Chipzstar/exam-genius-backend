@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import { app } from './app/app';
 import { serverRoutes } from './app/modules/server-routes';
 import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.service';
+import { scheduleStaleFigureRecovery } from './app/modules/paper/figure-stale-recovery';
 import fastifyEnv from '@fastify/env';
 import { logger, resolveDefaultLogLevel } from './app/utils/logger';
 
@@ -36,7 +37,9 @@ const options = {
 
 // Instantiate Fastify with some config
 const server = Fastify({
-  logger: true
+  logger: {
+    level: 'debug'
+  }
 });
 
 server.register(fastifyEnv, options)
@@ -48,6 +51,7 @@ server.register(cors, {
 // Register your application as a normal plugin.
 server.register(app);
 scheduleStaleMarkingRecovery(err => server.log.error(err));
+scheduleStaleFigureRecovery(err => server.log.error(err));
 
 server.get("/healthcheck", async function () {
   return { status: "OK" };

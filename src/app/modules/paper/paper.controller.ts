@@ -21,6 +21,11 @@ import {
 } from '../../prompts/paper-generate';
 import { buildParseLegacySystemPrompt, PARSE_LEGACY_PROMPT_VERSION } from '../../prompts/parse-legacy';
 import { runMarkSchemeGeneration } from './mark-scheme.service';
+import {
+	applyManualFigureReplacement,
+	runFigureGeneration
+} from './figure-render.service';
+import { getModel } from '../../utils/llm-model-config';
 import type { ExamLevel } from '@prisma/client';
 
 type GenerateBody = {
@@ -36,6 +41,7 @@ type GenerateBody = {
 
 export async function generatePaper(req: FastifyRequest, reply: FastifyReply): Promise<void> {
 	const t0 = Date.now();
+	let modelLogged = 'gpt-5-mini';
 	try {
 		const body = req.body as GenerateBody;
 		logger.debug('[paper.generate] entry', {
@@ -109,7 +115,8 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			avoid_preview: truncateForLog(style.avoid, 200)
 		});
 
-		const model = process.env.OPENAI_PAPER_MODEL ?? 'gpt-5-mini';
+		const { model_id: model } = await getModel('paper_generate');
+		modelLogged = model;
 		logAiStructured('paper_generate_start', {
 			paper_id: body.paper_id,
 			model,
@@ -224,6 +231,13 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			);
 		});
 
+		setImmediate(() => {
+			logger.debug('[paper.generate] figures_scheduled', { paper_id: paper.paper_id });
+			void runFigureGeneration(paper.paper_id).catch(err =>
+				logger.error('[paper.generate] figures_async_error', { paper_id: paper.paper_id, error: String(err) })
+			);
+		});
+
 		logAiStructured('paper_generate', {
 			paper_id: body.paper_id,
 			model,
@@ -256,7 +270,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			if (body?.paper_id) {
 				logAiStructured('paper_generate', {
 					paper_id: body.paper_id,
-					model: process.env.OPENAI_PAPER_MODEL ?? 'gpt-5-mini',
+					model: modelLogged,
 					prompt_version: PAPER_GENERATE_PROMPT_VERSION,
 					duration_ms: Date.now() - t0,
 					ok: false,
@@ -280,6 +294,7 @@ type ParseLegacyBody = {
 
 export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply): Promise<void> {
 	const t0 = Date.now();
+	let modelLogged = 'gpt-4o-mini';
 	try {
 		const { paper_id } = req.body as ParseLegacyBody;
 		logger.debug('[paper.parse_legacy] entry', { paper_id });
@@ -293,7 +308,8 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 			return reply.code(400).send({ error: 'No content' });
 		}
 
-		const model = process.env.OPENAI_PARSE_MODEL ?? 'gpt-4o-mini';
+		const { model_id: model } = await getModel('legacy_parse');
+		modelLogged = model;
 		const contentSlice = paper.content.slice(0, 100_000);
 		logger.debug('[paper.parse_legacy] llm_invoke', {
 			paper_id,
@@ -339,6 +355,13 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 		);
 		logger.debug('[paper.parse_legacy] db_transaction_commit', { paper_id });
 
+		setImmediate(() => {
+			logger.debug('[paper.parse_legacy] figures_scheduled', { paper_id });
+			void runFigureGeneration(paper_id).catch(err =>
+				logger.error('[paper.parse_legacy] figures_async_error', { paper_id, error: String(err) })
+			);
+		});
+
 		logAiStructured('paper_parse_legacy', {
 			paper_id,
 			model,
@@ -360,7 +383,7 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 		});
 		logAiStructured('paper_parse_legacy', {
 			paper_id: paper_id ?? 'unknown',
-			model: process.env.OPENAI_PARSE_MODEL ?? 'gpt-4o-mini',
+			model: modelLogged,
 			prompt_version: PARSE_LEGACY_PROMPT_VERSION,
 			duration_ms: Date.now() - t0,
 			ok: false,
@@ -386,4 +409,52 @@ export async function generateMarkSchemeHttp(req: FastifyRequest, reply: Fastify
 		logger.error('[paper.mark_scheme_http] async_error', { paper_id, error: String(err) })
 	);
 	return reply.code(202).send({ ok: true });
+}
+
+type GenerateFiguresBody = {
+	paper_id: string;
+};
+
+/** HTTP 202 fan-out: rerun `runFigureGeneration` for dashboards / ops when async worker never scheduled. */
+export async function generateFiguresHttp(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+	const { paper_id } = req.body as GenerateFiguresBody;
+	if (!paper_id) {
+		return reply.code(400).send({ error: 'paper_id required' });
+	}
+	logger.debug('[paper.figures_http] accepted', { paper_id });
+	void runFigureGeneration(paper_id).catch(err =>
+		logger.error('[paper.figures_http] async_error', { paper_id, error: String(err) })
+	);
+	return reply.code(202).send({ ok: true });
+}
+
+type ReplaceFigureBody = {
+	question_id: string;
+	block_index: number;
+	image_url: string;
+};
+
+/** Persist manual diagram URL from dashboard uploads (validated elsewhere) onto the indexed `figure` block. */
+export async function replaceFigureHttp(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+	const body = req.body as ReplaceFigureBody;
+	if (
+		!body?.question_id ||
+		typeof body.image_url !== 'string' ||
+		typeof body.block_index !== 'number' ||
+		!Number.isFinite(body.block_index)
+	) {
+		return reply.code(400).send({ error: 'question_id, block_index, image_url required' });
+	}
+	const blockIndex = Math.trunc(body.block_index);
+	if (blockIndex < 0) return reply.code(400).send({ error: 'block_index must be >= 0' });
+
+	const q = await prisma.question.findUnique({
+		where: { question_id: body.question_id },
+		select: { question_id: true }
+	});
+	if (!q) return reply.code(404).send({ error: 'Question not found' });
+
+	const ok = await applyManualFigureReplacement(body.question_id, blockIndex, body.image_url);
+	if (!ok) return reply.code(400).send({ error: 'Could not update figure block (invalid index or type)' });
+	return reply.code(200).send({ ok: true });
 }

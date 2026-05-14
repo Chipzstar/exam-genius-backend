@@ -17,6 +17,19 @@ export function renderBlockToHtml(block: ContentBlock): string {
 			return `<p class="eg-math">${escapeHtml(block.value)}</p>`;
 		case 'image_placeholder':
 			return `<p class="eg-figure"><em>[Figure: ${escapeHtml(block.caption)}]</em></p>`;
+		case 'figure': {
+			if (block.status === 'ready' && typeof block.svg === 'string' && block.svg.trim().length > 0) {
+				return `<div class="eg-figure-embed">${block.svg}</div>`;
+			}
+			if (block.status === 'ready' && block.image_url) {
+				const alt = escapeHtml(block.caption || 'Figure');
+				return `<figure class="eg-figure-img"><img src="${escapeHtml(block.image_url)}" alt="${alt}" /></figure>`;
+			}
+			if (block.status === 'failed') {
+				return `<p class="eg-figure eg-figure-failed"><em>[Figure: ${escapeHtml(block.caption)} — generation failed]</em></p>`;
+			}
+			return `<p class="eg-figure"><em>[Figure loading: ${escapeHtml(block.caption)}]</em></p>`;
+		}
 		case 'table': {
 			const head = block.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
 			const body = block.rows

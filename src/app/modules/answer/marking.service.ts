@@ -8,6 +8,7 @@ import {
 	AI_MARKING_PROMPT_VERSION,
 	buildAiMarkingSystemPrompt
 } from '../../prompts/ai-marking';
+import { getModel } from '../../utils/llm-model-config';
 
 export const MARKING_PROMPT_VERSION = AI_MARKING_PROMPT_VERSION;
 
@@ -126,6 +127,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 	}
 
 	const t0 = Date.now();
+	let modelUsed = 'gpt-5-mini';
 	const attempt = await prisma.attempt.findUnique({
 		where: { attempt_id: attemptId },
 		include: {
@@ -152,9 +154,10 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		throw new MarkingRequestError('AS-level marking is temporarily unavailable', 403);
 	}
 
-	const model = process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini';
-
 	try {
+		const { model_id } = await getModel('attempt_marking');
+		modelUsed = model_id;
+
 		const payload = {
 			mark_scheme: attempt.paper.markScheme?.model_answer ?? null,
 			questions: attempt.paper.questions.map(q => ({
@@ -170,7 +173,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		};
 
 		const completion = await openai.chat.completions.create({
-			model,
+			model: modelUsed,
 			response_format: { type: 'json_object' },
 			messages: [
 				{
@@ -234,7 +237,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		logAiStructured('mark_attempt', {
 			attempt_id: attemptId,
 			paper_id: attempt.paper_id,
-			model,
+			model: modelUsed,
 			prompt_version: MARKING_PROMPT_VERSION,
 			duration_ms: Date.now() - t0,
 			ok: true
@@ -243,7 +246,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		logAiStructured('mark_attempt', {
 			attempt_id: attemptId,
 			paper_id: attempt.paper_id,
-			model: process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini',
+			model: modelUsed,
 			prompt_version: MARKING_PROMPT_VERSION,
 			duration_ms: Date.now() - t0,
 			ok: false,
