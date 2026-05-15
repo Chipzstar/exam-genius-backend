@@ -72,7 +72,8 @@ const structuredBlockSchema = z.object({
 	caption: z.string().nullable(),
 	figure_label: z.string().nullable(),
 	diagram_type: z.string().nullable(),
-	elements: z.record(z.string(), z.any()).nullable(),
+	// OpenAI structured-output JSON Schema forbids `propertyNames`; `z.record` emits it.
+	elements: z.object({}).catchall(z.any()).nullable(),
 	render_method: z.enum(['svg_primary', 'raster_fallback', 'manual_upload']).nullable(),
 	svg: z.string().nullable(),
 	image_url: z.string().nullable(),
