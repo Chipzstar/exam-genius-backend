@@ -38,6 +38,9 @@ importers:
       pdf-parse:
         specifier: ^1.1.1
         version: 1.1.1
+      posthog-node:
+        specifier: ^5
+        version: 5.34.1
       tsconfig-paths:
         specifier: 4.2.0
         version: 4.2.0
@@ -1266,6 +1269,12 @@ packages:
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
+
+  '@posthog/core@1.29.1':
+    resolution: {integrity: sha512-q+/t/DZALr50YTE0dFgfGSS9EgwcyAlqsn+JS61wLkwdcDM5yu/YTDM8oMKmJupsyjSZlVkDuHZAMd4ab7AxzQ==}
+
+  '@posthog/types@1.373.4':
+    resolution: {integrity: sha512-n+0AbGRYYsbi+CQXQi2rF1lwTSyASlaogcw4YSkzB5KeMa4Y6nhNb7+TTnu9aVor+BycsQYCa2OsBrMMbaTekw==}
 
   '@prisma-utils/prismerge@1.7.0':
     resolution: {integrity: sha512-TQJVcJB1ZbX/jUg7yTYWu0SX0DgR5sbrJmBGySobMqvP/3pUzfLXQzLlHIK975x2LFXDXSE3atK/sff7iQQohg==}
@@ -3140,6 +3149,15 @@ packages:
   postgres@3.4.7:
     resolution: {integrity: sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw==}
     engines: {node: '>=12'}
+
+  posthog-node@5.34.1:
+    resolution: {integrity: sha512-kGl0kSfh2+Ey3KL5Sji3yv9W5xwPK9sTkINRoFqCh9fbYXWWY6Zwi5Psv2QmRcbYiMJBk/iecnoOKVDRRga6PA==}
+    engines: {node: ^20.20.0 || >=22.22.0}
+    peerDependencies:
+      rxjs: ^7.0.0
+    peerDependenciesMeta:
+      rxjs:
+        optional: true
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -5234,6 +5252,12 @@ snapshots:
       typescript: 5.7.3
 
   '@pinojs/redact@0.4.0': {}
+
+  '@posthog/core@1.29.1':
+    dependencies:
+      '@posthog/types': 1.373.4
+
+  '@posthog/types@1.373.4': {}
 
   '@prisma-utils/prismerge@1.7.0':
     dependencies:
@@ -7462,6 +7486,10 @@ snapshots:
   pluralize@8.0.0: {}
 
   postgres@3.4.7: {}
+
+  posthog-node@5.34.1:
+    dependencies:
+      '@posthog/core': 1.29.1
 
   prelude-ls@1.2.1: {}
 

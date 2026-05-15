@@ -6,6 +6,7 @@ import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.servi
 import { scheduleStaleFigureRecovery } from './app/modules/paper/figure-stale-recovery';
 import fastifyEnv from '@fastify/env';
 import { logger, resolveDefaultLogLevel } from './app/utils/logger';
+import { shutdownPostHog } from './app/utils/posthog-server';
 
 /** Bind broadly in deploy targets; Node does not set NODE_ENV — Railway may not either. */
 const listenOnAllInterfaces =
@@ -58,6 +59,14 @@ server.get("/healthcheck", async function () {
 })
 
 server.register(serverRoutes, { prefix: '/server' })
+
+server.addHook('onClose', (_instance, done) => {
+	try {
+		shutdownPostHog();
+	} finally {
+		done();
+	}
+});
 
 // Start listening.
 server.listen({ port, host }, err => {

@@ -16,8 +16,6 @@ export async function replacePaperQuestionsTx(
 		has_paper_meta: Boolean(result.paper_meta)
 	});
 	const byClient = new Map(flat.map(q => [q.client_id, q]));
-	const incomingIds = new Set(flat.map(q => q.client_id));
-
 	const depth = (id: string, seen = new Set<string>()): number => {
 		if (seen.has(id)) return 0;
 		seen.add(id);
@@ -39,10 +37,9 @@ export async function replacePaperQuestionsTx(
 	const idMap = new Map<string, string>();
 	const rows = [];
 	for (const q of sorted) {
-		if (!incomingIds.has(q.client_id)) continue;
 		const questionId = `q_${randomUUID().replace(/-/g, '')}`;
 		const parentId =
-			q.parent_client_id && idMap.has(q.parent_client_id) ? idMap.get(q.parent_client_id)! : null;
+			q.parent_client_id && idMap.has(q.parent_client_id) ? idMap.get(q.parent_client_id) : null;
 
 		rows.push({
 			question_id: questionId,

@@ -26,6 +26,7 @@ import {
 	runFigureGeneration
 } from './figure-render.service';
 import { getModel } from '../../utils/llm-model-config';
+import { isFigureGenerationEnabledForUser } from '../../utils/posthog-server';
 import type { ExamLevel } from '@prisma/client';
 
 type GenerateBody = {
@@ -231,12 +232,17 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			);
 		});
 
-		setImmediate(() => {
-			logger.debug('[paper.generate] figures_scheduled', { paper_id: paper.paper_id });
-			void runFigureGeneration(paper.paper_id).catch(err =>
-				logger.error('[paper.generate] figures_async_error', { paper_id: paper.paper_id, error: String(err) })
-			);
-		});
+		const figuresEnabled = await isFigureGenerationEnabledForUser(paper.user_id);
+		if (figuresEnabled) {
+			setImmediate(() => {
+				logger.debug('[paper.generate] figures_scheduled', { paper_id: paper.paper_id });
+				void runFigureGeneration(paper.paper_id).catch(err =>
+					logger.error('[paper.generate] figures_async_error', { paper_id: paper.paper_id, error: String(err) })
+				);
+			});
+		} else {
+			logger.debug('[paper.generate] figures_disabled', { paper_id: paper.paper_id });
+		}
 
 		logAiStructured('paper_generate', {
 			paper_id: body.paper_id,
@@ -355,12 +361,17 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 		);
 		logger.debug('[paper.parse_legacy] db_transaction_commit', { paper_id });
 
-		setImmediate(() => {
-			logger.debug('[paper.parse_legacy] figures_scheduled', { paper_id });
-			void runFigureGeneration(paper_id).catch(err =>
-				logger.error('[paper.parse_legacy] figures_async_error', { paper_id, error: String(err) })
-			);
-		});
+		const figuresEnabled = await isFigureGenerationEnabledForUser(paper.user_id);
+		if (figuresEnabled) {
+			setImmediate(() => {
+				logger.debug('[paper.parse_legacy] figures_scheduled', { paper_id });
+				void runFigureGeneration(paper_id).catch(err =>
+					logger.error('[paper.parse_legacy] figures_async_error', { paper_id, error: String(err) })
+				);
+			});
+		} else {
+			logger.debug('[paper.parse_legacy] figures_disabled', { paper_id });
+		}
 
 		logAiStructured('paper_parse_legacy', {
 			paper_id,
@@ -420,6 +431,16 @@ export async function generateFiguresHttp(req: FastifyRequest, reply: FastifyRep
 	const { paper_id } = req.body as GenerateFiguresBody;
 	if (!paper_id) {
 		return reply.code(400).send({ error: 'paper_id required' });
+	}
+	const paperRow = await prisma.paper.findUnique({
+		where: { paper_id },
+		select: { user_id: true }
+	});
+	if (!paperRow) {
+		return reply.code(404).send({ error: 'Paper not found' });
+	}
+	if (!(await isFigureGenerationEnabledForUser(paperRow.user_id))) {
+		return reply.code(409).send({ error: 'Figure generation disabled' });
 	}
 	logger.debug('[paper.figures_http] accepted', { paper_id });
 	void runFigureGeneration(paper_id).catch(err =>

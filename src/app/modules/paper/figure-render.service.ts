@@ -17,6 +17,7 @@ import {
 	FIGURE_RENDER_PROMPT_VERSION
 } from '../../prompts/figure-render';
 import { validateSvg } from './svg-validator';
+import { isFigureGenerationEnabledForUser } from '../../utils/posthog-server';
 
 /**
  * Async pipeline for structured `figure` blocks on questions: code-gen SVG (OpenAI or OpenRouter per DB config),
@@ -227,7 +228,8 @@ async function uploadFigureBuffer(fname: string, data: Buffer, mime: string): Pr
 	const ut = new UTApi({ token });
 	let file: File;
 	try {
-		file = new File([data], fname, { type: mime });
+		// File() expects BlobPart; Uint8Array avoids Node Buffer generic mismatch in TS.
+		file = new File([new Uint8Array(data)], fname, { type: mime });
 	} catch {
 		return null;
 	}
@@ -554,6 +556,18 @@ function mapSubjectReadable(subject: Subject): string {
  * **sequentially** (one blocking chain per invocation to limit load spikes).
  */
 export async function runFigureGeneration(paperId: string): Promise<void> {
+	const paperMeta = await prisma.paper.findUnique({
+		where: { paper_id: paperId },
+		select: { user_id: true }
+	});
+	if (!paperMeta) {
+		logger.debug('[figures] paper_not_found', { paper_id: paperId });
+		return;
+	}
+	if (!(await isFigureGenerationEnabledForUser(paperMeta.user_id))) {
+		logger.debug('[figures] generation_disabled', { paper_id: paperId });
+		return;
+	}
 	const pending = await collectPendingWorks(paperId);
 	if (!pending.length) {
 		logger.debug('[figures] no_pending_blocks', { paper_id: paperId });
