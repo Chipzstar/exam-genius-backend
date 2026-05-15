@@ -70,8 +70,11 @@ export async function isFigureGenerationEnabledForUser(userId: string): Promise<
 	if (process.env.DISABLE_FIGURE_GENERATION === 'true') return false;
 
 	const ph = getPostHog();
-	logger.debug('[posthog] isFigureGenerationEnabledForUser', { userId, ph });
-	if (!ph) return false;
+	if (ph) {
+		logger.debug('[posthog] posthog client ready');
+	} else {
+		return false;
+	}
 
 	try {
 		const flags = await ph.evaluateFlags(userId, { flagKeys: [FIGURE_GENERATION_FLAG_KEY] });

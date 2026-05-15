@@ -12,7 +12,7 @@ export function logAiStructured(event: string, fields: Record<string, unknown>):
 
 	const token = process.env.AXIOM_TOKEN;
 	const dataset = process.env.AXIOM_DATASET;
-	if (!token || !dataset) return;
+	if (!token || !dataset || process.env.NODE_ENV === 'development') return;
 
 	void fetch(`https://api.axiom.co/v1/datasets/${encodeURIComponent(dataset)}/ingest`, {
 		method: 'POST',

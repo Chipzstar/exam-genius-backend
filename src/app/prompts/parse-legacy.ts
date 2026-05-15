@@ -11,8 +11,8 @@ export function buildParseLegacySystemPrompt(): string {
 		`For text and math blocks, set value to a string and set headers, rows, caption, diagram_type, elements, svg, image_url to null (status null). ` +
 		`For table blocks, set headers and rows and set value and caption etc. null. ` +
 		`For image_placeholder blocks, set caption string and unrelated fields null. ` +
-		`For figure blocks, set caption, diagram_type, status \"pending\"; leave svg, image_url, render_method, generation_model, error_message null; unused block fields null. ` +
-		`IMPORTANT: the elements field is a JSON string (not an object) — serialize the elements dictionary as a compact JSON string, e.g. "{\"label\":\"x\"}"; use null if there are no elements. ` +
+		`For figure blocks, set caption, diagram_type, status "pending"; leave svg, image_url, render_method, generation_model, error_message null; unused block fields null. ` +
+		`IMPORTANT: the elements field is a JSON string (not an object) — serialize the elements dictionary as a compact JSON string, e.g. {"label":"x"}; use null if there are no elements. ` +
 		`Infer marks from phrases like [3 marks] when present, otherwise use 1. Preserve mathematical meaning. ` +
 		`If paper_meta is unknown, set it to null. For paper_meta fields you do not infer, use null (not omission).`
 	);
