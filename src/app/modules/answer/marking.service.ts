@@ -109,6 +109,7 @@ function parseMarkingResult(raw: string, expectedQuestionIds: string[]) {
 }
 
 export async function runAttemptMarking(attemptId: string): Promise<void> {
+	const t0 = Date.now();
 	const claimed = await prisma.attempt.updateMany({
 		where: { attempt_id: attemptId, status: AttemptStatus.submitted },
 		data: { status: AttemptStatus.marking, marking_started_at: new Date() }
@@ -116,17 +117,62 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 	if (claimed.count === 0) {
 		const row = await prisma.attempt.findUnique({
 			where: { attempt_id: attemptId },
-			select: { status: true }
+			select: { status: true, paper_id: true }
 		});
-		if (!row) throw new MarkingRequestError('Attempt not found', 404);
-		if (row.status === AttemptStatus.marked) return;
+		if (!row) {
+			logAiStructured('mark_attempt', {
+				attempt_id: attemptId,
+				paper_id: null,
+				model: 'gpt-5-mini',
+				prompt_version: MARKING_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: false,
+				phase: 'claim',
+				reason: 'not_found'
+			});
+			throw new MarkingRequestError('Attempt not found', 404);
+		}
+		if (row.status === AttemptStatus.marked) {
+			logAiStructured('mark_attempt', {
+				attempt_id: attemptId,
+				paper_id: row.paper_id,
+				model: 'gpt-5-mini',
+				prompt_version: MARKING_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: true,
+				phase: 'claim',
+				reason: 'already_marked_skip'
+			});
+			return;
+		}
 		if (row.status === AttemptStatus.marking) {
+			logAiStructured('mark_attempt', {
+				attempt_id: attemptId,
+				paper_id: row.paper_id,
+				model: 'gpt-5-mini',
+				prompt_version: MARKING_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: false,
+				phase: 'claim',
+				reason: 'marking_in_progress'
+			});
 			throw new MarkingRequestError('Marking already in progress', 409);
 		}
+		logAiStructured('mark_attempt', {
+			attempt_id: attemptId,
+			paper_id: row.paper_id,
+			model: 'gpt-5-mini',
+			prompt_version: MARKING_PROMPT_VERSION,
+			duration_ms: Date.now() - t0,
+			ok: false,
+			phase: 'claim',
+			reason: 'wrong_status',
+			status: row.status
+		});
 		throw new MarkingRequestError(`Cannot mark attempt in status ${row.status}`, 409);
 	}
 
-	const t0 = Date.now();
+	const tLlmStart = Date.now();
 	let modelUsed = 'gpt-5-mini';
 	const attempt = await prisma.attempt.findUnique({
 		where: { attempt_id: attemptId },
@@ -142,6 +188,16 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		}
 	});
 	if (!attempt || attempt.status !== AttemptStatus.marking) {
+		logAiStructured('mark_attempt', {
+			attempt_id: attemptId,
+			paper_id: attempt?.paper_id ?? null,
+			model: modelUsed,
+			prompt_version: MARKING_PROMPT_VERSION,
+			duration_ms: Date.now() - tLlmStart,
+			ok: false,
+			phase: 'post_claim',
+			reason: 'invalid_state'
+		});
 		throw new Error('Invalid attempt state after claim');
 	}
 
@@ -150,6 +206,16 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		await prisma.attempt.update({
 			where: { attempt_id: attemptId },
 			data: { status: AttemptStatus.submitted, marking_started_at: null }
+		});
+		logAiStructured('mark_attempt', {
+			attempt_id: attemptId,
+			paper_id: attempt.paper_id,
+			model: modelUsed,
+			prompt_version: MARKING_PROMPT_VERSION,
+			duration_ms: Date.now() - tLlmStart,
+			ok: false,
+			phase: 'preflight',
+			reason: 'as_level_blocked'
 		});
 		throw new MarkingRequestError('AS-level marking is temporarily unavailable', 403);
 	}
@@ -239,7 +305,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 			paper_id: attempt.paper_id,
 			model: modelUsed,
 			prompt_version: MARKING_PROMPT_VERSION,
-			duration_ms: Date.now() - t0,
+			duration_ms: Date.now() - tLlmStart,
 			ok: true
 		});
 	} catch (err) {
@@ -248,7 +314,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 			paper_id: attempt.paper_id,
 			model: modelUsed,
 			prompt_version: MARKING_PROMPT_VERSION,
-			duration_ms: Date.now() - t0,
+			duration_ms: Date.now() - tLlmStart,
 			ok: false,
 			error: String(err)
 		});

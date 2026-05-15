@@ -5,6 +5,7 @@ export function logAiStructured(event: string, fields: Record<string, unknown>):
 	const row = {
 		event,
 		ts: new Date().toISOString(),
+		source: 'backend',
 		...fields
 	};
 	logger.info('ai_structured', row);

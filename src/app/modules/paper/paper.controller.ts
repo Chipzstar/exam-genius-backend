@@ -62,6 +62,15 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		});
 		if (!paper?.course) {
 			logger.debug('[paper.generate] paper_not_found', { paper_id: body.paper_id });
+			logAiStructured('paper_generate', {
+				paper_id: body.paper_id,
+				model: modelLogged,
+				prompt_version: PAPER_GENERATE_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: false,
+				phase: 'preflight',
+				reason: 'paper_not_found'
+			});
 			return reply.code(404).send({ error: 'Paper not found' });
 		}
 		logger.debug('[paper.generate] paper_loaded', {
@@ -77,6 +86,16 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		const examLevel = paper.course.exam_level as ExamLevel;
 		if (examLevel === 'as_level' && process.env.DISABLE_AS_LEVEL_EXAM_FLOW === 'true') {
 			logger.warn('[paper.generate] as_level_blocked', { paper_id: body.paper_id });
+			logAiStructured('paper_generate', {
+				paper_id: body.paper_id,
+				model: modelLogged,
+				prompt_version: PAPER_GENERATE_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: false,
+				phase: 'preflight',
+				reason: 'as_level_blocked',
+				exam_level: examLevel
+			});
 			return reply.code(403).send({ error: 'AS-level generation is temporarily unavailable.' });
 		}
 

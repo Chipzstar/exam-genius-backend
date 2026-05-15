@@ -24,10 +24,22 @@ export async function runMarkSchemeGeneration(paperId: string): Promise<void> {
 			paper_found: Boolean(paper),
 			question_count: paper?.questions.length ?? 0
 		});
-		await prisma.paper.update({
-			where: { paper_id: paperId },
-			data: { mark_scheme_status: 'failed' }
+		logAiStructured('mark_scheme_generate', {
+			paper_id: paperId,
+			model: modelUsed,
+			prompt_version: MARK_SCHEME_PROMPT_VERSION,
+			duration_ms: Date.now() - t0,
+			ok: false,
+			phase: 'abort_preflight',
+			paper_found: Boolean(paper),
+			question_count: paper?.questions.length ?? 0
 		});
+		if (paper) {
+			await prisma.paper.update({
+				where: { paper_id: paperId },
+				data: { mark_scheme_status: 'failed' }
+			});
+		}
 		return;
 	}
 
