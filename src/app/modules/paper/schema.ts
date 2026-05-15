@@ -72,8 +72,11 @@ const structuredBlockSchema = z.object({
 	caption: z.string().nullable(),
 	figure_label: z.string().nullable(),
 	diagram_type: z.string().nullable(),
-	// OpenAI structured-output JSON Schema forbids `propertyNames`; `z.record` emits it.
-	elements: z.object({}).catchall(z.any()).nullable(),
+	// OpenAI structured outputs require every node to have a `type` and `additionalProperties: false`.
+	// Neither `z.record` (emits `propertyNames`) nor `z.object({}).catchall(z.any())` (emits
+	// `additionalProperties: {}` without a type) satisfy that constraint.  Serialize as a JSON
+	// string instead and parse it back in `structuredBlockToContentBlock`.
+	elements: z.string().nullable(),
 	render_method: z.enum(['svg_primary', 'raster_fallback', 'manual_upload']).nullable(),
 	svg: z.string().nullable(),
 	image_url: z.string().nullable(),
@@ -114,10 +117,17 @@ function structuredBlockToContentBlock(block: z.infer<typeof structuredBlockSche
 			return { kind: 'image_placeholder', caption: block.caption };
 		case 'figure': {
 			if (block.diagram_type == null) throw new Error('figure block missing diagram_type');
-			const elements =
-				block.elements && typeof block.elements === 'object' && !Array.isArray(block.elements)
-					? (block.elements as Record<string, unknown>)
-					: {};
+			let elements: Record<string, unknown> = {};
+			if (block.elements) {
+				try {
+					const parsed = JSON.parse(block.elements);
+					if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+						elements = parsed as Record<string, unknown>;
+					}
+				} catch {
+					// malformed JSON from model — treat as empty elements
+				}
+			}
 			const status = block.status ?? 'pending';
 			const fig: ContentBlock = {
 				kind: 'figure',
