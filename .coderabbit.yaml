@@ -1,0 +1,21 @@
+# CodeRabbit configuration for Chipzstar/exam-genius-backend
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: en-GB
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - staging
+      - dev
+  path_filters:
+    - "!**/*.lock"
+    - "!**/pnpm-lock.yaml"
+    - "!prisma/schema.prisma"

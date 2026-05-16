@@ -243,8 +243,8 @@ async function uploadFigureBuffer(fname: string, data: Buffer, mime: string): Pr
 			return null;
 		}
 		if ('data' in first && first.data && typeof first.data === 'object') {
-			const d = first.data as { ufsUrl?: string; url?: string };
-			return d.ufsUrl ?? d.url ?? null;
+			const d = first.data as { ufsUrl?: string };
+			return d.ufsUrl ?? null;
 		}
 		return null;
 	} catch (e) {
