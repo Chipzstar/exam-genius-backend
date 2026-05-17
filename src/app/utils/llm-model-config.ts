@@ -16,7 +16,7 @@ const DEFAULTS: Record<string, ResolvedLlmModel> = {
 	mark_scheme: { model_id: 'gpt-5-mini', provider: 'openai' },
 	legacy_parse: { model_id: 'gpt-4o-mini', provider: 'openai' },
 	attempt_marking: { model_id: 'gpt-5-mini', provider: 'openai' },
-	figure_svg: { model_id: 'gpt-5-mini', provider: 'openai' }
+	figure_svg: { model_id: 'gpt-5.4-mini', provider: 'openai' }
 };
 
 /** Load active rows fresh from DB map keyed by logical `key` column (used by TTL refresh). */

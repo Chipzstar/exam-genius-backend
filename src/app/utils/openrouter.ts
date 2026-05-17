@@ -23,7 +23,6 @@ export const DEFAULT_FIGURE_RASTER_MODEL_CHAIN =
 export function rasterModelChain(): string[] {
 	const raw =
 		process.env.FIGURE_RASTER_MODELS?.trim() ||
-		process.env.DEFAULT_FIGURE_RASTER_MODEL_CHAIN ||
 		DEFAULT_FIGURE_RASTER_MODEL_CHAIN;
 	return raw
 		.split(',')

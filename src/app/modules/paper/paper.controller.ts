@@ -215,7 +215,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 		if (!parsed) throw lastErr ?? new Error('Parse failed');
 
 		const html = renderPaperHtml(parsed);
-		const sanitizedContent = html.replace(/\\n\s+|\\n/g, '');
+		const sanitizedContent = html.replace(/\r?\n\s+|\r?\n/g, '');
 		logger.debug('[paper.generate] render_done', {
 			paper_id: body.paper_id,
 			html_chars: html.length,
@@ -237,7 +237,7 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 					}
 				});
 				logger.debug('[paper.generate] paper_row_updated', { paper_id: paper.paper_id });
-				await replacePaperQuestionsTx(tx, paper.paper_id, parsed!);
+				await replacePaperQuestionsTx(tx, paper.paper_id, parsed);
 				logger.debug('[paper.generate] questions_replaced_in_tx', { paper_id: paper.paper_id });
 			},
 			{ timeout: 15_000 }

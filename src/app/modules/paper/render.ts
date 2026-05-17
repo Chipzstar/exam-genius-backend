@@ -12,6 +12,7 @@ function escapeHtml(s: string): string {
 export function renderBlockToHtml(block: ContentBlock): string {
 	switch (block.kind) {
 		case 'text':
+			// text blocks are intentionally raw HTML, this should be documented and the input must be sanitized upstream.
 			return block.value;
 		case 'math':
 			return `<p class="eg-math">${escapeHtml(block.value)}</p>`;
