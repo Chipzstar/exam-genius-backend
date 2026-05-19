@@ -251,16 +251,20 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 			);
 		});
 
-		const figuresEnabled = await isFigureGenerationEnabledForUser(paper.user_id);
-		if (figuresEnabled) {
-			setImmediate(() => {
-				logger.debug('[paper.generate] figures_scheduled', { paper_id: paper.paper_id });
-				void runFigureGeneration(paper.paper_id).catch(err =>
-					logger.error('[paper.generate] figures_async_error', { paper_id: paper.paper_id, error: String(err) })
-				);
-			});
-		} else {
-			logger.debug('[paper.generate] figures_disabled', { paper_id: paper.paper_id });
+		try {
+			const figuresEnabled = await isFigureGenerationEnabledForUser(paper.user_id);
+			if (figuresEnabled) {
+				setImmediate(() => {
+					logger.debug('[paper.generate] figures_scheduled', { paper_id: paper.paper_id });
+					void runFigureGeneration(paper.paper_id).catch(err =>
+						logger.error('[paper.generate] figures_async_error', { paper_id: paper.paper_id, error: String(err) })
+					);
+				});
+			} else {
+				logger.debug('[paper.generate] figures_disabled', { paper_id: paper.paper_id });
+			}
+		} catch (err) {
+			logger.error('[paper.generate] figures_schedule_error', { paper_id: paper.paper_id, error: String(err) });
 		}
 
 		logAiStructured('paper_generate', {
@@ -380,16 +384,20 @@ export async function parseLegacyPaper(req: FastifyRequest, reply: FastifyReply)
 		);
 		logger.debug('[paper.parse_legacy] db_transaction_commit', { paper_id });
 
-		const figuresEnabled = await isFigureGenerationEnabledForUser(paper.user_id);
-		if (figuresEnabled) {
-			setImmediate(() => {
-				logger.debug('[paper.parse_legacy] figures_scheduled', { paper_id });
-				void runFigureGeneration(paper_id).catch(err =>
-					logger.error('[paper.parse_legacy] figures_async_error', { paper_id, error: String(err) })
-				);
-			});
-		} else {
-			logger.debug('[paper.parse_legacy] figures_disabled', { paper_id });
+		try {
+			const figuresEnabled = await isFigureGenerationEnabledForUser(paper.user_id);
+			if (figuresEnabled) {
+				setImmediate(() => {
+					logger.debug('[paper.parse_legacy] figures_scheduled', { paper_id });
+					void runFigureGeneration(paper_id).catch(err =>
+						logger.error('[paper.parse_legacy] figures_async_error', { paper_id, error: String(err) })
+					);
+				});
+			} else {
+				logger.debug('[paper.parse_legacy] figures_disabled', { paper_id });
+			}
+		} catch (err) {
+			logger.error('[paper.parse_legacy] figures_schedule_error', { paper_id, error: String(err) });
 		}
 
 		logAiStructured('paper_parse_legacy', {

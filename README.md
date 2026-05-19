@@ -99,11 +99,11 @@ src/app/
 
 ## API Endpoints
 
-All routes below are prefixed with `/server` and require the `x-exam-genius-secret` header.
+Routes under `/server` require the `x-exam-genius-secret` header. `GET /healthcheck` is the exception: mounted at the app root (not under `/server`) for deploy liveness probes and requires no auth.
 
 | Method | Path                                 | Purpose                                         |
 | ------ | ------------------------------------ | ----------------------------------------------- |
-| `GET`  | `/healthcheck`                       | Liveness probe (no auth)                        |
+| `GET`  | `/healthcheck`                       | Liveness probe (root path, no `x-exam-genius-secret`) |
 | `POST` | `/server/paper/generate`             | Generate a structured exam paper                |
 | `POST` | `/server/paper/generate-mark-scheme` | Generate mark scheme for a paper                |
 | `POST` | `/server/paper/generate-figures`     | Render pending figure blocks                    |
