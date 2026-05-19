@@ -1,24 +1,24 @@
 {
-  "root": true,
-  "ignorePatterns": ["!**/*"],
-  "plugins": ["@nx/eslint-plugin"],
-  "overrides": [
-    {
-      "files": ["*.ts", "*.tsx"],
-      "extends": ["plugin:@nx/eslint-plugin/typescript"],
-      "rules": {}
-    },
-    {
-      "files": ["*.js", "*.jsx"],
-      "extends": ["plugin:@nx/eslint-plugin/javascript"],
-      "rules": {}
-    },
-    {
-      "files": ["*.spec.ts", "*.spec.tsx", "*.spec.js", "*.spec.jsx"],
-      "env": {
-        "jest": true
-      },
-      "rules": {}
-    }
-  ]
+	"root": true,
+	"ignorePatterns": ["!**/*", "**/vite.config.*.timestamp*", "**/vitest.config.*.timestamp*"],
+	"plugins": ["@nx/eslint-plugin"],
+	"overrides": [
+		{
+			"files": ["*.ts", "*.tsx"],
+			"extends": ["plugin:@nx/eslint-plugin/typescript"],
+			"rules": {}
+		},
+		{
+			"files": ["*.js", "*.jsx"],
+			"extends": ["plugin:@nx/eslint-plugin/javascript"],
+			"rules": {}
+		},
+		{
+			"files": ["*.spec.ts", "*.spec.tsx", "*.spec.js", "*.spec.jsx"],
+			"env": {
+				"jest": true
+			},
+			"rules": {}
+		}
+	]
 }

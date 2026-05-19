@@ -4,10 +4,8 @@ import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
-import {
-	AI_MARKING_PROMPT_VERSION,
-	buildAiMarkingSystemPrompt
-} from '../../prompts/ai-marking';
+import { AI_MARKING_PROMPT_VERSION, buildAiMarkingSystemPrompt } from '../../prompts/ai-marking';
+import { getModel } from '../../utils/llm-model-config';
 
 export const MARKING_PROMPT_VERSION = AI_MARKING_PROMPT_VERSION;
 
@@ -15,10 +13,7 @@ const DEFAULT_STALE_AFTER_MINUTES = 30;
 const DEFAULT_STALE_SWEEP_MS = 300_000;
 
 export class MarkingRequestError extends Error {
-	constructor(
-		message: string,
-		readonly statusCode: number
-	) {
+	constructor(message: string, readonly statusCode: number) {
 		super(message);
 		this.name = 'MarkingRequestError';
 	}
@@ -108,6 +103,7 @@ function parseMarkingResult(raw: string, expectedQuestionIds: string[]) {
 }
 
 export async function runAttemptMarking(attemptId: string): Promise<void> {
+	const t0 = Date.now();
 	const claimed = await prisma.attempt.updateMany({
 		where: { attempt_id: attemptId, status: AttemptStatus.submitted },
 		data: { status: AttemptStatus.marking, marking_started_at: new Date() }
@@ -115,17 +111,63 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 	if (claimed.count === 0) {
 		const row = await prisma.attempt.findUnique({
 			where: { attempt_id: attemptId },
-			select: { status: true }
+			select: { status: true, paper_id: true }
 		});
-		if (!row) throw new MarkingRequestError('Attempt not found', 404);
-		if (row.status === AttemptStatus.marked) return;
+		if (!row) {
+			logAiStructured('mark_attempt', {
+				attempt_id: attemptId,
+				paper_id: null,
+				model: 'gpt-5-mini',
+				prompt_version: MARKING_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: false,
+				phase: 'claim',
+				reason: 'not_found'
+			});
+			throw new MarkingRequestError('Attempt not found', 404);
+		}
+		if (row.status === AttemptStatus.marked) {
+			logAiStructured('mark_attempt', {
+				attempt_id: attemptId,
+				paper_id: row.paper_id,
+				model: 'gpt-5-mini',
+				prompt_version: MARKING_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: true,
+				phase: 'claim',
+				reason: 'already_marked_skip'
+			});
+			return;
+		}
 		if (row.status === AttemptStatus.marking) {
+			logAiStructured('mark_attempt', {
+				attempt_id: attemptId,
+				paper_id: row.paper_id,
+				model: 'gpt-5-mini',
+				prompt_version: MARKING_PROMPT_VERSION,
+				duration_ms: Date.now() - t0,
+				ok: false,
+				phase: 'claim',
+				reason: 'marking_in_progress'
+			});
 			throw new MarkingRequestError('Marking already in progress', 409);
 		}
+		logAiStructured('mark_attempt', {
+			attempt_id: attemptId,
+			paper_id: row.paper_id,
+			model: 'gpt-5-mini',
+			prompt_version: MARKING_PROMPT_VERSION,
+			duration_ms: Date.now() - t0,
+			ok: false,
+			phase: 'claim',
+			reason: 'wrong_status',
+			status: row.status
+		});
 		throw new MarkingRequestError(`Cannot mark attempt in status ${row.status}`, 409);
 	}
 
-	const t0 = Date.now();
+	const tLlmStart = Date.now();
+	let modelUsed = 'gpt-5-mini';
 	const attempt = await prisma.attempt.findUnique({
 		where: { attempt_id: attemptId },
 		include: {
@@ -140,6 +182,16 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		}
 	});
 	if (!attempt || attempt.status !== AttemptStatus.marking) {
+		logAiStructured('mark_attempt', {
+			attempt_id: attemptId,
+			paper_id: attempt?.paper_id ?? null,
+			model: modelUsed,
+			prompt_version: MARKING_PROMPT_VERSION,
+			duration_ms: Date.now() - tLlmStart,
+			ok: false,
+			phase: 'post_claim',
+			reason: 'invalid_state'
+		});
 		throw new Error('Invalid attempt state after claim');
 	}
 
@@ -149,12 +201,23 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 			where: { attempt_id: attemptId },
 			data: { status: AttemptStatus.submitted, marking_started_at: null }
 		});
+		logAiStructured('mark_attempt', {
+			attempt_id: attemptId,
+			paper_id: attempt.paper_id,
+			model: modelUsed,
+			prompt_version: MARKING_PROMPT_VERSION,
+			duration_ms: Date.now() - tLlmStart,
+			ok: false,
+			phase: 'preflight',
+			reason: 'as_level_blocked'
+		});
 		throw new MarkingRequestError('AS-level marking is temporarily unavailable', 403);
 	}
 
-	const model = process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini';
-
 	try {
+		const { model_id } = await getModel('attempt_marking');
+		modelUsed = model_id;
+
 		const payload = {
 			mark_scheme: attempt.paper.markScheme?.model_answer ?? null,
 			questions: attempt.paper.questions.map(q => ({
@@ -170,7 +233,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		};
 
 		const completion = await openai.chat.completions.create({
-			model,
+			model: modelUsed,
 			response_format: { type: 'json_object' },
 			messages: [
 				{
@@ -186,9 +249,7 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		const expectedQuestionIds = attempt.answers.map(a => a.question_id);
 		const parsed = parseMarkingResult(raw, expectedQuestionIds);
 
-		const byQuestionId = new Map(
-			parsed.questions.map(q => [q.question_id, q] as const)
-		);
+		const byQuestionId = new Map(parsed.questions.map(q => [q.question_id, q] as const));
 
 		const maxTotal = attempt.answers.reduce((sum, a) => sum + a.max_score, 0);
 
@@ -196,13 +257,9 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		for (const ans of attempt.answers) {
 			const q = byQuestionId.get(ans.question_id);
 			if (!q) {
-				throw new Error(
-					`Marking output missing question_id after validation: ${ans.question_id}`
-				);
+				throw new Error(`Marking output missing question_id after validation: ${ans.question_id}`);
 			}
-			const clamped = Math.round(
-				Math.max(0, Math.min(q.score, ans.max_score))
-			);
+			const clamped = Math.round(Math.max(0, Math.min(q.score, ans.max_score)));
 			total += clamped;
 			await prisma.attemptAnswer.update({
 				where: {
@@ -234,18 +291,18 @@ export async function runAttemptMarking(attemptId: string): Promise<void> {
 		logAiStructured('mark_attempt', {
 			attempt_id: attemptId,
 			paper_id: attempt.paper_id,
-			model,
+			model: modelUsed,
 			prompt_version: MARKING_PROMPT_VERSION,
-			duration_ms: Date.now() - t0,
+			duration_ms: Date.now() - tLlmStart,
 			ok: true
 		});
 	} catch (err) {
 		logAiStructured('mark_attempt', {
 			attempt_id: attemptId,
 			paper_id: attempt.paper_id,
-			model: process.env.OPENAI_MARKING_MODEL ?? 'gpt-5-mini',
+			model: modelUsed,
 			prompt_version: MARKING_PROMPT_VERSION,
-			duration_ms: Date.now() - t0,
+			duration_ms: Date.now() - tLlmStart,
 			ok: false,
 			error: String(err)
 		});

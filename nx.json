@@ -5,8 +5,7 @@
 		"default": {
 			"runner": "nx-cloud",
 			"options": {
-				"cacheableOperations": ["build", "lint", "test", "e2e"],
-				"accessToken": "YmY1NWQ2ZmUtOTY3Yy00ZTVjLWIwOWUtYTg5Y2QwOGIyZmQ4fHJlYWQtd3JpdGU="
+				"cacheableOperations": ["build", "lint", "test", "e2e"]
 			}
 		}
 	},
@@ -20,6 +19,10 @@
 		},
 		"lint": {
 			"inputs": ["default", "{workspaceRoot}/.eslintrc.json", "{workspaceRoot}/.eslintignore"]
+		},
+		"@nx/vite:test": {
+			"cache": true,
+			"inputs": ["default", "^production"]
 		}
 	},
 	"namedInputs": {
@@ -29,10 +32,12 @@
 			"!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
 			"!{projectRoot}/tsconfig.spec.json",
 			"!{projectRoot}/jest.config.[jt]s",
-			"!{projectRoot}/.eslintrc.json"
+			"!{projectRoot}/.eslintrc.json",
+			"!{projectRoot}/src/test-setup.[jt]s"
 		],
 		"sharedGlobals": []
 	},
 	"useInferencePlugins": false,
-	"defaultBase": "master"
+	"defaultBase": "master",
+	"nxCloudId": "6447f5875ff4811340669d59"
 }

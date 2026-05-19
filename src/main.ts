@@ -3,8 +3,10 @@ import cors from '@fastify/cors';
 import { app } from './app/app';
 import { serverRoutes } from './app/modules/server-routes';
 import { scheduleStaleMarkingRecovery } from './app/modules/answer/marking.service';
+import { scheduleStaleFigureRecovery } from './app/modules/paper/figure-stale-recovery';
 import fastifyEnv from '@fastify/env';
 import { logger, resolveDefaultLogLevel } from './app/utils/logger';
+import { shutdownPostHog } from './app/utils/posthog-server';
 
 /** Bind broadly in deploy targets; Node does not set NODE_ENV — Railway may not either. */
 const listenOnAllInterfaces =
@@ -15,60 +17,71 @@ const host = listenOnAllInterfaces ? '0.0.0.0' : 'localhost';
 const port = Number(process.env.PORT);
 
 const schema = {
-  type: 'object',
-  required: ['OPENAI_API_KEY', 'BACKEND_SHARED_SECRET'],
-  properties: {
-    OPENAI_API_KEY: {
-      type: 'string'
-    },
-    BACKEND_SHARED_SECRET: {
-      type: 'string'
-    }
-  }
-}
+	type: 'object',
+	required: ['OPENAI_API_KEY', 'BACKEND_SHARED_SECRET'],
+	properties: {
+		OPENAI_API_KEY: {
+			type: 'string'
+		},
+		BACKEND_SHARED_SECRET: {
+			type: 'string'
+		}
+	}
+};
 
 const options = {
-  confKey: 'config',
-  dotenv: true,
-  schema,
-  data: process.env
-}
+	confKey: 'config',
+	dotenv: true,
+	schema,
+	data: process.env
+};
 
 // Instantiate Fastify with some config
 const server = Fastify({
-  logger: true
+	logger: {
+		level: resolveDefaultLogLevel()
+	}
 });
 
-server.register(fastifyEnv, options)
+server.register(fastifyEnv, options);
 server.register(cors, {
-  origin: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-})
+	origin: true,
+	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+});
 
 // Register your application as a normal plugin.
 server.register(app);
 scheduleStaleMarkingRecovery(err => server.log.error(err));
+scheduleStaleFigureRecovery(err => server.log.error(err));
 
-server.get("/healthcheck", async function () {
-  return { status: "OK" };
-})
+server.get('/healthcheck', async function () {
+	return { status: 'OK' };
+});
 
-server.register(serverRoutes, { prefix: '/server' })
+server.register(serverRoutes, { prefix: '/server' });
+
+server.addHook('onClose', (_instance, done) => {
+	try {
+		shutdownPostHog();
+	} finally {
+		done();
+	}
+});
 
 // Start listening.
 server.listen({ port, host }, err => {
-  if (err) {
-    server.log.error(err);
-    process.exit(1);
-  } else {
-    console.log(`[ ready ] ${listenOnAllInterfaces ? "https://" : "http://"}${host}:${port}`);
-    logger.info('backend_winston_logging', {
-      effective_level: logger.level,
-      log_level_env: process.env.LOG_LEVEL ?? '(unset)',
-      resolved_default: resolveDefaultLogLevel(),
-      doppler_env: process.env.DOPPLER_ENVIRONMENT ?? '(unset)',
-      railway_env_name: process.env.RAILWAY_ENVIRONMENT_NAME ?? '(unset)',
-      node_env: process.env.NODE_ENV ?? '(unset)'
-    });
-  }
+	if (err) {
+		server.log.error(err);
+		process.exit(1);
+	} else {
+		console.log(`[ ready ] ${listenOnAllInterfaces ? 'https://' : 'http://'}${host}:${port}`);
+		logger.info('backend_winston_logging', {
+			effective_level: logger.level,
+			log_level_env: process.env.LOG_LEVEL ?? '(unset)',
+			resolved_default: resolveDefaultLogLevel(),
+			doppler_env: process.env.DOPPLER_ENVIRONMENT ?? '(unset)',
+			railway_env_name: process.env.RAILWAY_ENVIRONMENT_NAME ?? '(unset)',
+			node_env: process.env.NODE_ENV ?? '(unset)'
+		});
+	}
 });
