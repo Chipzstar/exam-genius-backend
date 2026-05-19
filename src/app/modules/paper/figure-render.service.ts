@@ -6,7 +6,7 @@ import { getOpenRouterClient, rasterModelChain } from '../../utils/openrouter';
 import type { FigureBlock } from './schema';
 import { buildFigureRasterPrompt, FIGURE_RENDER_PROMPT_VERSION } from '../../prompts/figure-render';
 import { isFigureGenerationEnabledForUser } from '../../utils/posthog-server';
-import { extractRasterPayload, uploadFigureBuffer } from './figure-raster-pipeline';
+import { extensionFromImageMime, extractRasterPayload, uploadFigureBuffer } from './figure-raster-pipeline';
 
 /**
  * Async pipeline for structured `figure` blocks: OpenRouter raster image models, UploadThing storage.
@@ -95,7 +95,7 @@ async function tryRasterViaOpenRouter(
 			const payload = await extractRasterPayload(completion);
 			if (!payload) throw new Error('no_image_extracted_from_response');
 
-			const ext = payload.mime.includes('jpeg') ? 'jpg' : 'png';
+			const ext = extensionFromImageMime(payload.mime);
 			const url = await uploadFigureBuffer(`eg-figure.${ext}`, payload.data, payload.mime);
 			if (!url) throw new Error('upload_failed');
 

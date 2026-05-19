@@ -3,6 +3,20 @@ import axios from 'axios';
 import { UTApi } from 'uploadthing/server';
 import { logger } from '../../utils/logger';
 
+const IMAGE_MIME_TO_EXT: Record<string, string> = {
+	'image/jpeg': 'jpg',
+	'image/jpg': 'jpg',
+	'image/png': 'png',
+	'image/webp': 'webp',
+	'image/gif': 'gif'
+};
+
+/** File extension for upload filenames from a Content-Type / MIME string; `bin` when unknown. */
+export function extensionFromImageMime(mime: string): string {
+	const base = mime.split(';')[0]?.trim().toLowerCase() ?? '';
+	return IMAGE_MIME_TO_EXT[base] ?? 'bin';
+}
+
 /** Collapse OpenAI-style message `content` arrays to a single string for SVG / text parsing. */
 export function contentToPlainText(content: string | ChatCompletionContentPart[] | null): string | null {
 	if (content == null) return null;
@@ -101,6 +115,45 @@ function decodeB64Chunk(b64: string, mimeHint?: string): { data: Buffer; mime: s
 	}
 }
 
+type RasterImageCandidate = { url?: string; b64?: string; mimeHint?: string };
+
+/** Safe debug summary — no base64 payloads or full signed URLs. */
+function summarizeRasterCandidates(candidates: RasterImageCandidate[]): {
+	total: number;
+	withB64: number;
+	withUrl: number;
+	mimeHintOnly: number;
+	urlHostnames: string[];
+} {
+	let withB64 = 0;
+	let withUrl = 0;
+	let mimeHintOnly = 0;
+	const hostnames = new Set<string>();
+
+	for (const c of candidates) {
+		const hasB64 = Boolean(c.b64);
+		const hasUrl = Boolean(c.url);
+		if (hasB64) withB64++;
+		if (hasUrl) {
+			withUrl++;
+			try {
+				hostnames.add(new URL(c.url as string).hostname);
+			} catch {
+				// skip unparseable URL strings
+			}
+		}
+		if (c.mimeHint && !hasB64 && !hasUrl) mimeHintOnly++;
+	}
+
+	return {
+		total: candidates.length,
+		withB64,
+		withUrl,
+		mimeHintOnly,
+		urlHostnames: [...hostnames].sort()
+	};
+}
+
 /** Pull first `![](https://….png)` style URL from markdown-ish assistant text. */
 function extractImageMarkdownUrl(s: string): string | null {
 	const m = /!\[[^\]]*]\(\s*(https?:\/\/[^)\s]+\.(?:png|jpe?g|webp)(\?[^\s]*)?)/i.exec(s);
@@ -157,7 +210,7 @@ export async function extractRasterPayload(completion: ChatCompletion): Promise<
 		if (embedded) candidates.push({ url: embedded });
 	}
 	candidates.push(...walkForImageCandidates(msg));
-	logger.debug('[figures] extractRasterPayload candidates', candidates);
+	logger.debug('[figures] extractRasterPayload candidates', summarizeRasterCandidates(candidates));
 
 	for (const c of candidates) {
 		if (c.url) {

@@ -3,10 +3,23 @@ import type { ChatCompletion } from 'openai/resources/chat/completions';
 import { describe, expect, it } from 'vitest';
 import { buildFigureRasterPrompt } from '../../prompts/figure-render';
 import { getOpenRouterClient, rasterModelChain } from '../../utils/openrouter';
-import { extractRasterPayload, uploadFigureBuffer } from './figure-raster-pipeline';
+import { extensionFromImageMime, extractRasterPayload, uploadFigureBuffer } from './figure-raster-pipeline';
 import { logger } from 'src/app/utils/logger';
 
 const hasIntegrationCreds = Boolean(process.env.OPENROUTER_API_KEY?.trim() && process.env.UPLOADTHING_TOKEN?.trim());
+
+describe('extensionFromImageMime', () => {
+	it('maps common image MIME types', () => {
+		expect(extensionFromImageMime('image/png')).toBe('png');
+		expect(extensionFromImageMime('image/jpeg')).toBe('jpg');
+		expect(extensionFromImageMime('image/webp')).toBe('webp');
+		expect(extensionFromImageMime('image/gif')).toBe('gif');
+		expect(extensionFromImageMime('image/png; charset=binary')).toBe('png');
+	});
+	it('falls back to bin for unknown MIME', () => {
+		expect(extensionFromImageMime('application/octet-stream')).toBe('bin');
+	});
+});
 
 /** Require buffer to start like PNG, JPEG, or RIFF (WebP). */
 function assertLooksLikeImage(label: string, buf: Buffer): void {
@@ -37,7 +50,7 @@ async function openRouterExtractAndUpload(model: string, rasterPrompt: string): 
 
 	assertLooksLikeImage(`extracted payload (${model})`, payload.data);
 
-	const ext = payload.mime.includes('jpeg') ? 'jpg' : 'png';
+	const ext = extensionFromImageMime(payload.mime);
 	const safeSlug = model.replace(/[^a-zA-Z0-9._-]+/g, '_');
 	const ufsUrl = await uploadFigureBuffer(`eg-figure-integration_${safeSlug}.${ext}`, payload.data, payload.mime);
 

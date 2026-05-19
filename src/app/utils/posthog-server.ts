@@ -82,14 +82,14 @@ export async function isFigureGenerationEnabledForUser(userId: string): Promise<
 		if (!enabled) {
 			const value = flags.getFlag(FIGURE_GENERATION_FLAG_KEY);
 			logger.debug('[posthog] enable_figure_generation not enabled for user', {
-				userId,
+				userId_suffix: userId.slice(-6),
 				flagKeysEvaluated: flags.keys,
 				flagValue: value
 			});
 		}
 		return enabled;
 	} catch (e) {
-		logger.warn('[posthog] evaluateFlags failed', { error: String(e), userId });
+		logger.warn('[posthog] evaluateFlags failed', { error: String(e), userId_suffix: userId.slice(-6) });
 		return false;
 	}
 }
