@@ -31,7 +31,7 @@ function getPostHog(): PostHog | null {
 	if (personalApiKey?.startsWith('phc_')) {
 		logger.warn(
 			'[posthog] POSTHOG_FEATURE_FLAGS_SECURE_API_KEY looks like a project ingestion key (phc_). ' +
-			'Use a Feature Flags secure API key (phx_ prefix) from project settings, not the ingestion key.'
+				'Use a Feature Flags secure API key (phx_ prefix) from project settings, not the ingestion key.'
 		);
 		personalApiKey = undefined;
 	}
@@ -39,7 +39,7 @@ function getPostHog(): PostHog | null {
 	if (!personalApiKey) {
 		logger.warn(
 			'[posthog] POSTHOG_FEATURE_FLAGS_SECURE_API_KEY unset; flag checks will use remote /flags only. ' +
-			'Set the secure key to enable local evaluation (see https://posthog.com/docs/feature-flags/local-evaluation ).'
+				'Set the secure key to enable local evaluation (see https://posthog.com/docs/feature-flags/local-evaluation ).'
 		);
 	}
 

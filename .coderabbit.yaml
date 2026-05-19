@@ -16,6 +16,6 @@ reviews:
       - staging
       - dev
   path_filters:
-    - "!**/*.lock"
-    - "!**/pnpm-lock.yaml"
-    - "!prisma/schema.prisma"
+    - '!**/*.lock'
+    - '!**/pnpm-lock.yaml'
+    - '!prisma/schema.prisma'

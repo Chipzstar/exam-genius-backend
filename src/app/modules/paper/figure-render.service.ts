@@ -25,11 +25,7 @@ type QueuedFigureWork = {
 
 /** Type guard: block is a `{ kind: 'figure', ... }` payload. */
 function isFigureSlice(b: unknown): b is FigureSlice {
-	return (
-		Boolean(b) &&
-		typeof b === 'object' &&
-		(b as { kind?: string }).kind === 'figure'
-	);
+	return Boolean(b) && typeof b === 'object' && (b as { kind?: string }).kind === 'figure';
 }
 
 /** Parse question `body` JSON as an array of blocks; log and return null if malformed. */

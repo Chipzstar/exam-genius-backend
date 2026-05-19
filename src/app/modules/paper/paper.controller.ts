@@ -21,10 +21,7 @@ import {
 } from '../../prompts/paper-generate';
 import { buildParseLegacySystemPrompt, PARSE_LEGACY_PROMPT_VERSION } from '../../prompts/parse-legacy';
 import { runMarkSchemeGeneration } from './mark-scheme.service';
-import {
-	applyManualFigureReplacement,
-	runFigureGeneration
-} from './figure-render.service';
+import { applyManualFigureReplacement, runFigureGeneration } from './figure-render.service';
 import { getModel } from '../../utils/llm-model-config';
 import { isFigureGenerationEnabledForUser } from '../../utils/posthog-server';
 import type { ExamLevel } from '@prisma/client';
@@ -112,7 +109,10 @@ export async function generatePaper(req: FastifyRequest, reply: FastifyReply): P
 					status: 'ready'
 				}
 			});
-			referenceExcerpts = refs.map(r => r.extracted_text).join('\n\n---\n\n').slice(0, 120_000);
+			referenceExcerpts = refs
+				.map(r => r.extracted_text)
+				.join('\n\n---\n\n')
+				.slice(0, 120_000);
 			logger.debug('[paper.generate] references_loaded', {
 				paper_id: body.paper_id,
 				rows_matched: refs.length,

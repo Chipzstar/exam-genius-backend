@@ -2,11 +2,7 @@ import type { ContentBlock, PaperGenerationResult } from './schema';
 import { logger } from '../../utils/logger';
 
 function escapeHtml(s: string): string {
-	return s
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;');
+	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export function renderBlockToHtml(block: ContentBlock): string {
@@ -27,15 +23,15 @@ export function renderBlockToHtml(block: ContentBlock): string {
 				return `<figure class="eg-figure-img"><img src="${escapeHtml(block.image_url)}" alt="${alt}" /></figure>`;
 			}
 			if (block.status === 'failed') {
-				return `<p class="eg-figure eg-figure-failed"><em>[Figure: ${escapeHtml(block.caption)} — generation failed]</em></p>`;
+				return `<p class="eg-figure eg-figure-failed"><em>[Figure: ${escapeHtml(
+					block.caption
+				)} — generation failed]</em></p>`;
 			}
 			return `<p class="eg-figure"><em>[Figure loading: ${escapeHtml(block.caption)}]</em></p>`;
 		}
 		case 'table': {
 			const head = block.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
-			const body = block.rows
-				.map(row => `<tr>${row.map(c => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`)
-				.join('');
+			const body = block.rows.map(row => `<tr>${row.map(c => `<td>${escapeHtml(c)}</td>`).join('')}</tr>`).join('');
 			return `<table class="eg-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 		}
 		default:

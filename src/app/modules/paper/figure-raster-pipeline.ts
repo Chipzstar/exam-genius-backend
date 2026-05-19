@@ -28,12 +28,7 @@ function walkForImageCandidates(obj: unknown, depth = 0): Array<{ url?: string; 
 		const m = /\b(https?:\/\/[^\s)>"']+)/i.exec(obj);
 		if (m) out.push({ url: m[1] });
 		const bare = /^[A-Za-z0-9+/=\s]+$/.exec(obj.trim().replace(/\s/g, '').slice(0, 4096));
-		if (
-			bare &&
-			obj.trim().replace(/\s/g, '').length > 300 &&
-			!obj.includes('http') &&
-			!/<svg/i.test(obj)
-		) {
+		if (bare && obj.trim().replace(/\s/g, '').length > 300 && !obj.includes('http') && !/<svg/i.test(obj)) {
 			out.push({ b64: obj.replace(/\s/g, '') });
 		}
 		return out;

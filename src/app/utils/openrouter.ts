@@ -21,9 +21,7 @@ export const DEFAULT_FIGURE_RASTER_MODEL_CHAIN =
  * Parse `FIGURE_RASTER_MODELS` (comma list) → ordered OpenRouter identifiers tried sequentially for diagram rasterisation.
  */
 export function rasterModelChain(): string[] {
-	const raw =
-		process.env.FIGURE_RASTER_MODELS?.trim() ||
-		DEFAULT_FIGURE_RASTER_MODEL_CHAIN;
+	const raw = process.env.FIGURE_RASTER_MODELS?.trim() || DEFAULT_FIGURE_RASTER_MODEL_CHAIN;
 	return raw
 		.split(',')
 		.map(s => s.trim())

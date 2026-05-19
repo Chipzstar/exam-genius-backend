@@ -38,8 +38,7 @@ export async function replacePaperQuestionsTx(
 	const rows = [];
 	for (const q of sorted) {
 		const questionId = `q_${randomUUID().replace(/-/g, '')}`;
-		const parentId =
-			q.parent_client_id && idMap.has(q.parent_client_id) ? idMap.get(q.parent_client_id) : null;
+		const parentId = q.parent_client_id && idMap.has(q.parent_client_id) ? idMap.get(q.parent_client_id) : null;
 
 		rows.push({
 			question_id: questionId,

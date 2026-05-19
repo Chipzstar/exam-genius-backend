@@ -25,15 +25,24 @@ export function buildPaperGenerateUserPrompt(params: {
 	const { student } = qualificationLabels(level);
 	const ref =
 		params.referenceExcerpts.trim().length > 0
-			? `\n\nReference material (style and format only; do not copy verbatim):\n${params.referenceExcerpts.slice(0, 120_000)}`
+			? `\n\nReference material (style and format only; do not copy verbatim):\n${params.referenceExcerpts.slice(
+					0,
+					120_000
+			  )}`
 			: '';
 	const ex =
 		params.styleExemplars.trim().length > 0
-			? `\n\nThe student liked these past generations — emulate tone, difficulty, and structure:\n${params.styleExemplars.slice(0, 20_000)}`
+			? `\n\nThe student liked these past generations — emulate tone, difficulty, and structure:\n${params.styleExemplars.slice(
+					0,
+					20_000
+			  )}`
 			: '';
 	const av =
 		params.styleAvoid.trim().length > 0
-			? `\n\nAdjust for this feedback from the student (avoid repeating these issues):\n${params.styleAvoid.slice(0, 8000)}`
+			? `\n\nAdjust for this feedback from the student (avoid repeating these issues):\n${params.styleAvoid.slice(
+					0,
+					8000
+			  )}`
 			: '';
 
 	return (
