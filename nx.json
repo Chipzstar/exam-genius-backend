@@ -35,7 +35,7 @@
 			"!{projectRoot}/.eslintrc.json",
 			"!{projectRoot}/src/test-setup.[jt]s"
 		],
-		"sharedGlobals": []
+		"sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
 	},
 	"useInferencePlugins": false,
 	"defaultBase": "master",
