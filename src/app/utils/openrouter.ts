@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 
 /**
  * Lightweight OpenRouter client (OpenAI-compatible API).
- * Raster figure fallback skips entire branch when env key missing → null.
+ * Figure diagram rasterisation skips when env key missing → null.
  */
 export function getOpenRouterClient(): OpenAI | null {
 	const key = process.env.OPENROUTER_API_KEY;

@@ -3,7 +3,7 @@ import { logger } from './logger';
 
 /**
  * Resolves persisted model routing (`LlmModelConfig` rows): which OpenAI-compatible `model_id` and `provider` string
- * to use per logical key (`figure_svg`, `paper_generate`, …). TTL cache avoids hammering Postgres on hot paths.
+ * to use per logical key (`paper_generate`, `mark_scheme`, …). TTL cache avoids hammering Postgres on hot paths.
  */
 export type ResolvedLlmModel = { model_id: string; provider: string };
 
@@ -15,8 +15,7 @@ const DEFAULTS: Record<string, ResolvedLlmModel> = {
 	paper_generate: { model_id: 'gpt-5-mini', provider: 'openai' },
 	mark_scheme: { model_id: 'gpt-5-mini', provider: 'openai' },
 	legacy_parse: { model_id: 'gpt-4o-mini', provider: 'openai' },
-	attempt_marking: { model_id: 'gpt-5-mini', provider: 'openai' },
-	figure_svg: { model_id: 'gpt-5.4-mini', provider: 'openai' }
+	attempt_marking: { model_id: 'gpt-5-mini', provider: 'openai' }
 };
 
 /** Load active rows fresh from DB map keyed by logical `key` column (used by TTL refresh). */

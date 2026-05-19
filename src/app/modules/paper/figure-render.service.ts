@@ -1,30 +1,20 @@
 import type { Subject } from '@prisma/client';
-import { openai } from '../../utils/gpt';
 import { prisma } from '../../utils/prisma';
 import { logger } from '../../utils/logger';
 import { logAiStructured } from '../../utils/ai-structured-log';
-import { getModel, type ResolvedLlmModel } from '../../utils/llm-model-config';
 import { getOpenRouterClient, rasterModelChain } from '../../utils/openrouter';
 import type { FigureBlock } from './schema';
-import {
-	buildFigureRasterPrompt,
-	buildFigureSvgRetryUserPrompt,
-	buildFigureSvgSystemPrompt,
-	buildFigureSvgUserPrompt,
-	FIGURE_RENDER_PROMPT_VERSION
-} from '../../prompts/figure-render';
-import { validateSvg } from './svg-validator';
+import { buildFigureRasterPrompt, FIGURE_RENDER_PROMPT_VERSION } from '../../prompts/figure-render';
 import { isFigureGenerationEnabledForUser } from '../../utils/posthog-server';
-import { contentToPlainText, extractRasterPayload, uploadFigureBuffer } from './figure-raster-pipeline';
+import { extractRasterPayload, uploadFigureBuffer } from './figure-raster-pipeline';
 
 /**
- * Async pipeline for structured `figure` blocks on questions: code-gen SVG (OpenAI or OpenRouter per DB config),
- * validation + one retry, then OpenRouter image models and UploadThing when SVG fails. Blocks are updated in place
- * on the question `body` JSON array.
+ * Async pipeline for structured `figure` blocks: OpenRouter raster image models, UploadThing storage.
+ * Blocks are updated in place on the question `body` JSON array.
  */
 type FigureSlice = FigureBlock;
 
-/** One unit of raster/SVG pipeline work: pinned question row + JSON block index + snapshot of the figure payload. */
+/** One unit of raster pipeline work: pinned question row + JSON block index + snapshot of the figure payload. */
 type QueuedFigureWork = {
 	paper_id: string;
 	question_id: string;
@@ -32,28 +22,6 @@ type QueuedFigureWork = {
 	subjectLabel: string;
 	block: FigureSlice;
 };
-
-/** Remove markdown-style ``` fences so we can parse SVG from models that wrap output. */
-function stripCodeFences(s: string): string {
-	const t = s.trim();
-	const m =
-		/^```(?:svg|xml|html)?\s*([\s\S]*?)```\s*$/im.exec(t) ?? /^```\s*([\s\S]*?)```$/im.exec(t);
-	return m?.[1]?.trim() ?? t;
-}
-
-/**
- * Best-effort parse of assistant text after stripping code fences — returns first balanced `<svg>…</svg>` substring.
- * Exported for tests; callers still run `validateSvg` before trusting output.
- */
-export function extractSvgFromModelOutput(raw: string | null): string | null {
-	if (!raw) return null;
-	const cleaned = stripCodeFences(raw);
-	const m =
-		cleaned.match(/<svg\b[\s\S]*?<\/svg>/i) ??
-		raw.match(/<svg\b[\s\S]*?<\/svg>/i) ??
-		stripCodeFences(raw).match(/<svg\b[\s\S]*?<\/svg>/i);
-	return m?.[0]?.trim() ?? null;
-}
 
 /** Type guard: block is a `{ kind: 'figure', ... }` payload. */
 function isFigureSlice(b: unknown): b is FigureSlice {
@@ -95,39 +63,6 @@ async function mutateFigureBlock(
 		data: { body: JSON.parse(JSON.stringify(body)) }
 	});
 	return true;
-}
-
-/**
- * Dispatch a chat completion to either OpenRouter or the shared OpenAI SDK client, based on `resolved.provider`.
- * Returns aggregated plain text from message content (handles string or multi-part assistant content).
- */
-async function invokeTextCompletion(
-	resolved: ResolvedLlmModel,
-	system: string,
-	user: string
-): Promise<{ text: string | null }> {
-	if (resolved.provider === 'openrouter') {
-		const client = getOpenRouterClient();
-		if (!client) throw new Error('OPENROUTER_API_KEY_missing');
-		const completion = await client.chat.completions.create({
-			model: resolved.model_id,
-			messages: [
-				{ role: 'system', content: system },
-				{ role: 'user', content: user }
-			]
-		});
-		const msg = completion.choices[0]?.message;
-		return { text: contentToPlainText(msg?.content ?? null) };
-	}
-	const completion = await openai.chat.completions.create({
-		model: resolved.model_id,
-		messages: [
-			{ role: 'system', content: system },
-			{ role: 'user', content: user }
-		]
-	});
-	const raw = completion.choices[0]?.message?.content;
-	return { text: typeof raw === 'string' ? raw : contentToPlainText(raw ?? null) };
 }
 
 /**
@@ -187,10 +122,7 @@ async function tryRasterViaOpenRouter(
 	return null;
 }
 
-/**
- * Single end-to-end pass for one pending figure: stamp `generation_started_at`, SVG ×2 (`figure_svg` model), raster fallback,
- * then persist ready/failure on the indexed block.
- */
+/** Single end-to-end pass for one pending figure: OpenRouter raster → UploadThing → persist ready/failure. */
 async function processOneFigure(job: QueuedFigureWork): Promise<void> {
 	const { paper_id, question_id, blockIndex, subjectLabel } = job;
 	const figSnapshot = job.block;
@@ -215,84 +147,10 @@ async function processOneFigure(job: QueuedFigureWork): Promise<void> {
 	}));
 
 	try {
-		const resolvedSvg = await getModel('figure_svg');
-		const svgModelUsed = resolvedSvg.model_id;
-
-		const system = buildFigureSvgSystemPrompt();
-		const userBase = buildFigureSvgUserPrompt({
-			subject: subjectLabel,
-			diagram_type: figSnapshot.diagram_type,
-			caption: figSnapshot.caption,
-			figure_label: figSnapshot.figure_label,
-			elements: figSnapshot.elements ?? {}
-		});
-
-		const svgAttemptCore = async (usr: string, label: 'primary' | 'retry') => {
-			logAiStructured('figure_svg_attempt', {
-				prompt_version: FIGURE_RENDER_PROMPT_VERSION,
-				paper_id,
-				model: svgModelUsed,
-				parent: resolvedSvg.provider,
-				attempt: label
-			});
-			const { text } = await invokeTextCompletion(resolvedSvg, system, usr);
-			const extracted = extractSvgFromModelOutput(text);
-			const validResult = extracted
-				? validateSvg(extracted, { elements: figSnapshot.elements ?? {} })
-				: { valid: false as const, reason: 'missing_svg_fragment' };
-
-			const okSvg = validResult.valid === true;
-			const failReason =
-				okSvg ? undefined : validResult.reason ?? (extracted ? 'svg_invalid' : 'missing_svg_fragment');
-
-			return { svg: extracted, raw: text ?? '', okSvg, failReason };
-		};
-
-		const attempt = await svgAttemptCore(userBase, 'primary');
-		let svg = attempt.svg;
-		let okSvg = attempt.okSvg;
-		let failReason = attempt.failReason;
-
-		if (!okSvg) {
-			logAiStructured('figure_svg_fail', {
-				prompt_version: FIGURE_RENDER_PROMPT_VERSION,
-				model: svgModelUsed,
-				reason: failReason ?? 'first_pass'
-			});
-
-			const retryUser = buildFigureSvgRetryUserPrompt(
-				failReason ?? 'Invalid or incomplete SVG',
-				userBase
-			);
-			const second = await svgAttemptCore(retryUser, 'retry');
-			svg = second.svg;
-			okSvg = second.okSvg;
-			failReason = second.failReason ?? failReason;
-		}
-
-		if (okSvg && svg != null && svg.trim().length > 0) {
-			await mutateFigureBlock(question_id, blockIndex, f => ({
-				...f,
-				svg,
-				image_url: null,
-				render_method: 'svg_primary',
-				status: 'ready',
-				generation_model: `${resolvedSvg.provider}:${svgModelUsed}`,
-				error_message: null
-			}));
-			logAiStructured('figure_svg_success', {
-				prompt_version: FIGURE_RENDER_PROMPT_VERSION,
-				paper_id,
-				model: svgModelUsed
-			});
+		if (!getOpenRouterClient()) {
+			await markFailed('OPENROUTER_API_KEY_missing');
 			return;
 		}
-
-		logAiStructured('figure_svg_fail', {
-			prompt_version: FIGURE_RENDER_PROMPT_VERSION,
-			model: svgModelUsed,
-			reason: failReason ?? 'invalid_svg_final'
-		});
 
 		const raster = await tryRasterViaOpenRouter(subjectLabel, figSnapshot);
 		if (raster) {
@@ -308,7 +166,7 @@ async function processOneFigure(job: QueuedFigureWork): Promise<void> {
 			return;
 		}
 
-		await markFailed(failReason ?? 'svg_and_raster_exhausted');
+		await markFailed('raster_exhausted');
 	} catch (e) {
 		logger.error('[figures] process_error', {
 			paper_id,
