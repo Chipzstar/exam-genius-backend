@@ -39,7 +39,7 @@ const options = {
 // Instantiate Fastify with some config
 const server = Fastify({
 	logger: {
-		level: 'debug'
+		level: resolveDefaultLogLevel()
 	}
 });
 

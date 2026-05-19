@@ -1,10 +1,14 @@
 import winston from 'winston';
 
-/** Explicit LOG_LEVEL wins. Otherwise debug in local Railway dev / Doppler dev so verbose traces appear. */
-export function resolveDefaultLogLevel(): string {
-	if (process.env.LOG_LEVEL && process.env.LOG_LEVEL.trim()) {
-		return process.env.LOG_LEVEL.trim();
-	}
+/** Pino (Fastify) and Winston share these level names in this service. */
+const ALLOWED_LOG_LEVELS = new Set(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent']);
+
+function normalizeLogLevel(raw: string): string | null {
+	const level = raw.trim().toLowerCase();
+	return ALLOWED_LOG_LEVELS.has(level) ? level : null;
+}
+
+function resolveEnvironmentLogLevel(): string {
 	if (
 		process.env.DOPPLER_ENVIRONMENT === 'dev' ||
 		process.env.RAILWAY_ENVIRONMENT_NAME === 'development' ||
@@ -13,6 +17,13 @@ export function resolveDefaultLogLevel(): string {
 		return 'debug';
 	}
 	return 'info';
+}
+
+/** Explicit `LOG_LEVEL` wins when valid. Otherwise debug in dev-like deploys, else `info`. */
+export function resolveDefaultLogLevel(): string {
+	const fromEnv = process.env.LOG_LEVEL ? normalizeLogLevel(process.env.LOG_LEVEL) : null;
+	if (fromEnv) return fromEnv;
+	return resolveEnvironmentLogLevel();
 }
 
 /** Shorten large strings when attaching to debug payloads (avoid log bloat). */
